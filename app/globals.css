@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @config "../tailwind.config.js";
+@import './iblai-styles.css';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 

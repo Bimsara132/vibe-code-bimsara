@@ -2,6 +2,8 @@
 
 import { useCallback, useRef, useState } from 'react'
 
+import { useIblaiUser, formatDisplayName } from '@/lib/iblai/use-iblai-user'
+
 import { ConnectToolsButton } from './connect-tools-button'
 import { LovableBackground } from './lovable-background'
 import { PromptInput } from './prompt-input'
@@ -11,6 +13,11 @@ export function MainContent() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef(0)
   const [scrollY, setScrollY] = useState(0)
+  const { displayName, email } = useIblaiUser()
+  const greetingName =
+    displayName ||
+    (email.split('@')[0] ? formatDisplayName(email.split('@')[0]) : '') ||
+    'there'
 
   const handleScroll = useCallback(() => {
     cancelAnimationFrame(rafRef.current)
@@ -45,7 +52,7 @@ export function MainContent() {
               </div>
               <h1 className="text-foreground flex items-center gap-1 text-base leading-none font-medium transition-opacity duration-500 md:gap-0 md:text-[25px]">
                 <span className="min-h-6 pt-0.5 text-[#4f4f4f] md:pt-0">
-                  What&apos;s on your mind, Bimsara?
+                  What&apos;s on your mind, {greetingName}?
                 </span>
               </h1>
             </div>

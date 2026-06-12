@@ -1,8 +1,9 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { Suspense, useEffect, useState } from 'react'
 
+import { ProfileDialog } from '@/components/iblai/profile-dialog'
 import { useOnyxUI } from '@/components/onyx-shell-context'
 import { cn } from '@/lib/utils'
 
@@ -32,11 +33,19 @@ function DashboardPage({ path }: { path: string }) {
 
 export function DashboardShell() {
   const pathname = usePathname()
-  const { connectorsOpen } = useOnyxUI()
+  const router = useRouter()
+  const { connectorsOpen, setProfileOpen } = useOnyxUI()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [connectorsBackdropPath, setConnectorsBackdropPath] = useState<string | null>(
     null,
   )
+
+  useEffect(() => {
+    if (pathname.startsWith('/app/profile')) {
+      setProfileOpen(true)
+      router.replace('/app')
+    }
+  }, [pathname, router, setProfileOpen])
 
   useEffect(() => {
     if (!connectorsOpen) {
@@ -83,6 +92,7 @@ export function DashboardShell() {
       </div>
 
       <SearchChatsDialog />
+      <ProfileDialog />
     </>
   )
 }

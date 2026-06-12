@@ -1,0 +1,6 @@
+/*
+ * ibl.ai SDK styles — imported by globals.css after Tailwind setup.
+ */
+
+@import '@iblai/iblai-js/web-containers/styles';
+@source "../node_modules/@iblai/iblai-js/dist/web-containers/source";

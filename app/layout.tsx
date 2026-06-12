@@ -1,6 +1,9 @@
 import { Analytics } from '@vercel/analytics/next'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+
+import { IblaiProviders } from '@/providers/iblai-providers'
+
 import './globals.css'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
@@ -31,6 +34,12 @@ export const metadata: Metadata = {
   },
 }
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +48,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">
-        {children}
+        <IblaiProviders>{children}</IblaiProviders>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

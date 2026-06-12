@@ -92,11 +92,11 @@ import { SlackIntegrationMarkIcon } from '@/components/icons/slack-integration-m
 import { VoiceSettingsIcon } from '@/components/icons/voice-settings-icon'
 import { useOnyxUI } from '@/components/onyx-shell-context'
 import { useProjects } from '@/components/projects-context'
+import { useIblaiUser } from '@/lib/iblai/use-iblai-user'
+import { handleLogout } from '@/lib/iblai/auth-utils'
 import { cn } from '@/lib/utils'
 
-const USERNAME = 'bimsaraimalkabm'
-const USER_INITIALS = 'BI'
-const USER_EMAIL = `${USERNAME}@gmail.com`
+import { UserAvatar } from './user-avatar'
 
 const SIDEBAR_SECTION_LABEL_CLASS =
   'px-2 pt-2.5 pb-0 text-[10px] font-semibold uppercase tracking-wider text-[#9ca3af]'
@@ -879,7 +879,8 @@ function SidebarProfileDropdown({
   collapsed: boolean
   afterNavigate?: () => void
 }) {
-  const router = useRouter()
+  const { setProfileOpen } = useOnyxUI()
+  const { displayName, email } = useIblaiUser()
   const done = () => afterNavigate?.()
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [view, setView] = React.useState<'menu' | 'notifications'>('menu')
@@ -908,13 +909,13 @@ function SidebarProfileDropdown({
         {collapsed ? (
           <button
             type="button"
-            aria-label={USERNAME}
+            aria-label={displayName || email || 'Profile'}
             className={cn(
               newSessionCollapsedClassName,
-              'relative font-semibold text-[10px] text-ibl-neutral',
+              'relative overflow-hidden p-0',
             )}
           >
-            {USER_INITIALS}
+            <UserAvatar size="sm" className="size-full rounded-[7px] border-0" />
             {unreadBadge ? (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#2563EB] px-[3px] text-[9px] font-bold text-white">
                 {unreadBadge}
@@ -927,14 +928,9 @@ function SidebarProfileDropdown({
             className={cn(navRowClassName, 'rounded-lg')}
             title="Profile"
           >
-            <span
-              className="flex size-4 shrink-0 items-center justify-center rounded border border-[#e0e0e2] bg-white text-[9px] font-semibold leading-none text-ibl-neutral"
-              aria-hidden
-            >
-              {USER_INITIALS}
-            </span>
+            <UserAvatar size="xs" />
             <span className="min-w-0 flex-1 truncate text-left text-[14px] font-normal">
-              {USERNAME}
+              {displayName || email}
             </span>
             {unreadBadge ? (
               <Badge className="h-5 min-w-5 justify-center rounded-full border-transparent bg-[#2563EB] px-1.5 py-0 text-[10px] font-semibold leading-none text-white hover:bg-[#2563EB]">
@@ -948,7 +944,7 @@ function SidebarProfileDropdown({
         side="top"
         align="start"
         sideOffset={10}
-        className="w-[min(calc(100vw-1rem),320px)] rounded-xl border border-neutral-200 bg-white p-0 shadow-[0_12px_40px_-16px_rgba(15,23,42,0.2)] dark:border-border dark:bg-popover"
+        className="z-[300] w-[min(calc(100vw-1rem),320px)] rounded-xl border border-neutral-200 bg-white p-0 shadow-[0_12px_40px_-16px_rgba(15,23,42,0.2)] dark:border-border dark:bg-popover"
       >
         {view === 'notifications' ? (
           <SidebarNotificationsPanel
@@ -961,7 +957,7 @@ function SidebarProfileDropdown({
           <>
             <div className="border-b border-neutral-200 px-3 py-3 dark:border-border">
               <p className="truncate text-[14px] font-semibold leading-snug text-ibl-neutral">
-                {USER_EMAIL}
+                {email || displayName}
               </p>
             </div>
             <div className="p-1.5">
@@ -971,7 +967,7 @@ function SidebarProfileDropdown({
                   e.preventDefault()
                   setMenuOpen(false)
                   done()
-                  router.push('/app/settings')
+                  setProfileOpen(true)
                 }}
               >
                 <SlidersHorizontal
@@ -1022,11 +1018,7 @@ function SidebarProfileDropdown({
                 onSelect={(e) => {
                   e.preventDefault()
                   setMenuOpen(false)
-                  done()
-                  if (typeof window !== 'undefined') {
-                    localStorage.removeItem('isAuthenticated')
-                  }
-                  router.push('/')
+                  handleLogout()
                 }}
               >
                 <LogOut className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
@@ -1036,7 +1028,7 @@ function SidebarProfileDropdown({
             <DropdownMenuSeparator className="my-0 bg-neutral-200 dark:bg-border" />
             <div className="flex items-center justify-end gap-2 px-3 py-2.5">
               <span className="text-[11px] font-medium text-[#9ca3af] underline decoration-[#9ca3af]/60 underline-offset-2">
-                Onyx v3.3.0-cloud.12
+                vibe.ibl.ai 1.0.0
               </span>
               <Image
                 src="/logo.png"
@@ -1097,7 +1089,7 @@ function SidebarContentImpl({
     <div
       className={cn(
         'flex h-full min-h-0 flex-col font-sans antialiased',
-        collapsed ? 'overflow-visible px-2 pt-0 pb-5' : 'px-[10px] pt-0 pb-0',
+        collapsed ? 'overflow-visible px-2 pt-0 pb-5' : 'overflow-visible px-[10px] pt-0 pb-0',
       )}
     >
       <div
@@ -1382,11 +1374,11 @@ function SidebarContentImpl({
       </nav>
 
       {collapsed ? (
-        <div className="mt-auto flex shrink-0 flex-col items-center gap-0.5 border-t border-[#e2e8f0] px-2 py-3">
+        <div className="relative z-[60] mt-auto flex shrink-0 flex-col items-center gap-0.5 overflow-visible border-t border-[#e2e8f0] px-2 py-3">
           <SidebarProfileDropdown collapsed afterNavigate={done} />
         </div>
       ) : (
-        <div className="mt-auto shrink-0 space-y-0.5 border-t border-[#e2e8f0] px-0 py-2">
+        <div className="relative z-[60] mt-auto shrink-0 space-y-0.5 overflow-visible border-t border-[#e2e8f0] px-0 py-2">
           <SidebarProfileDropdown collapsed={false} afterNavigate={done} />
         </div>
       )}
@@ -1415,7 +1407,7 @@ export function SidebarRail() {
         'relative hidden shrink-0 flex-col border-r border-[#e9e9ea] bg-[#fafafa] transition-[width] duration-200 ease-out md:flex',
         sidebarCollapsed
           ? 'w-sidebar-collapsed overflow-visible md:z-30'
-          : 'w-sidebar-expanded',
+          : 'w-sidebar-expanded overflow-visible md:z-50',
       )}
     >
       <SidebarContent variant={variant} />
@@ -1445,7 +1437,7 @@ export function DashboardSidebar({
         mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         variant === 'collapsed'
           ? 'w-sidebar-collapsed overflow-visible md:z-30'
-          : 'w-sidebar-expanded md:z-auto',
+          : 'w-sidebar-expanded overflow-visible md:z-50',
       )}
     >
       <SidebarContent variant={variant} afterNavigate={onMobileClose} />
