@@ -1,0 +1,299 @@
+@import 'tailwindcss';
+@config "../tailwind.config.js";
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+.nanum-myeongjo-regular {
+  font-family: var(--font-nanum-myeongjo), 'Nanum Myeongjo', serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+/** Nanum Myeongjo maxes at 800; stroke adds perceived weight without a 900 cut. */
+.ibl-console-title-heavy {
+  -webkit-text-stroke: 0.65px currentColor;
+  paint-order: stroke fill;
+}
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: #717185;
+  --card: oklch(1 0 0);
+  --card-foreground: #717185;
+  --popover: oklch(1 0 0);
+  --popover-foreground: #717185;
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: #717185;
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: color-mix(in srgb, #717185 72%, #ffffff);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: #717185;
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: #717185;
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: #717185;
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  --btn-primary-from: #baceff;
+  --btn-primary-to: #0078ff;
+  --btn-primary-from-hover: #a9bdff;
+  --btn-primary-to-hover: #0069e0;
+  --btn-gradient: linear-gradient(to right, var(--btn-primary-from), var(--btn-primary-to));
+}
+
+.btn-primary-gradient {
+  background: linear-gradient(to right, var(--btn-primary-from), var(--btn-primary-to));
+  transition: background 150ms ease;
+}
+
+.btn-primary-gradient:hover {
+  background: linear-gradient(
+    to right,
+    var(--btn-primary-from-hover),
+    var(--btn-primary-to-hover)
+  );
+}
+
+.btn-primary-gradient-ghost:hover {
+  background: linear-gradient(
+    to right,
+    var(--btn-primary-from-hover),
+    var(--btn-primary-to-hover)
+  );
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+}
+
+/** Tailwind v4: map CSS variables to theme tokens (shadcn + Geist from `app/layout.tsx`). */
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /**
+   * Full-viewport modal shells (fixed inset-0 flex center) — iOS Safari safe areas.
+   * Use instead of raw p-4 on overlay wrappers so notch / home indicator clear content.
+   */
+  .dialog-modal-safe-padding {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  }
+
+  @media (min-width: 640px) {
+    .dialog-modal-safe-padding {
+      padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+      padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+      padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+      padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    }
+  }
+}
+
+/**
+ * Dialog safe areas — p-0 admin/custom layouts (header/footer siblings).
+ * Base positioning lives in components/ui/dialog.tsx and alert-dialog.tsx.
+ */
+@media (max-width: 639px) {
+  [data-slot='dialog-content'].p-0 > :first-child[class*='border-b'],
+  [data-slot='alert-dialog-content'].p-0 > :first-child[class*='border-b'] {
+    padding-top: max(1.5rem, env(safe-area-inset-top, 0px));
+  }
+
+  [data-slot='dialog-content'].p-0
+    > :last-child[class*='border-t']:not([data-slot='dialog-footer']),
+  [data-slot='alert-dialog-content'].p-0
+    > :last-child[class*='border-t']:not([data-slot='alert-dialog-footer']) {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Sonner success toasts — brand blues (not default green) */
+[data-sonner-toaster][data-theme='light'] {
+  --success-bg: #eef6fc;
+  --success-border: #b8daf0;
+  --success-text: #2d8bcb;
+}
+
+/**
+ * Prevent iOS Safari from zooming the page when focusing form fields.
+ * Safari auto-zooms if the focused control’s font-size is below 16px.
+ */
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='button']):not([type='submit']):not([type='reset']):not([type='file']):not([type='hidden']):not([type='image']),
+  select,
+  textarea,
+  [contenteditable='true'],
+  [data-slot='input'],
+  [data-slot='textarea'],
+  [data-slot='select-trigger'] {
+    font-size: 16px !important;
+  }
+}
+
+.lovable-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255, 120, 180, 0.9) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 85% 15%, rgba(114, 132, 255, 0.85) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 70% at 50% 80%, rgba(255, 80, 140, 0.95) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 70%, rgba(255, 160, 60, 0.8) 0%, transparent 55%),
+    linear-gradient(160deg, #ebeeff 0%, #f0c4e8 35%, #ff6b9d 65%, #ff8c42 100%);
+}
+
+/** Wide soft gradient for template card thumbnails — matches bg_gradient / brand blues. */
+.ibl-card-gradient {
+  background:
+    radial-gradient(ellipse 150% 120% at 10% 0%, rgba(186, 206, 255, 0.95) 0%, transparent 52%),
+    radial-gradient(ellipse 140% 100% at 90% 15%, rgba(114, 132, 255, 0.8) 0%, transparent 50%),
+    radial-gradient(ellipse 160% 110% at 50% 100%, rgba(255, 150, 200, 0.7) 0%, transparent 55%),
+    radial-gradient(ellipse 130% 90% at 100% 65%, rgba(0, 120, 255, 0.35) 0%, transparent 48%),
+    linear-gradient(135deg, #f8faff 0%, #eef2ff 38%, #f3e8f8 72%, #fef6f9 100%);
+}
+
+/** Brand blues only — less pink/purple for compact empty-state cards. */
+.ibl-card-gradient-blue {
+  background:
+    radial-gradient(ellipse 150% 120% at 10% 0%, rgba(186, 206, 255, 0.9) 0%, transparent 52%),
+    radial-gradient(ellipse 140% 100% at 90% 15%, rgba(114, 132, 255, 0.65) 0%, transparent 50%),
+    radial-gradient(ellipse 160% 110% at 50% 100%, rgba(208, 224, 255, 0.75) 0%, transparent 55%),
+    radial-gradient(ellipse 130% 90% at 100% 65%, rgba(0, 120, 255, 0.28) 0%, transparent 48%),
+    linear-gradient(135deg, #f8faff 0%, #eef2ff 45%, #e8efff 78%, #f5f8ff 100%);
+}
+
+@keyframes connectors-hero-marquee-left {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes connectors-hero-marquee-right {
+  from {
+    transform: translate3d(-50%, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.connectors-hero-marquee-left {
+  animation: connectors-hero-marquee-left 60s linear infinite;
+}
+
+.connectors-hero-marquee-right {
+  animation: connectors-hero-marquee-right 60s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connectors-hero-marquee-left,
+  .connectors-hero-marquee-right {
+    animation: none;
+  }
+}
