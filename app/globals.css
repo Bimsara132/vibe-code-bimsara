@@ -298,3 +298,26 @@
     animation: none;
   }
 }
+
+@keyframes app-logo-breathe {
+  0%,
+  100% {
+    opacity: 0.88;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+.animate-app-logo {
+  animation: app-logo-breathe 2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-app-logo {
+    animation: none;
+  }
+}

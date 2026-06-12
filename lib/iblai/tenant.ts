@@ -3,6 +3,7 @@
  */
 
 import config from '@/lib/iblai/config'
+import { isSsoRedirectSuppressed } from '@/lib/iblai/auth-utils'
 
 const PLACEHOLDER_PLATFORMS = new Set([
   'your-main-platform',
@@ -37,6 +38,8 @@ export function resolveAppTenant(): string {
 
 export function checkTenantMismatch(): boolean {
   if (typeof window === 'undefined') return false
+
+  if (isSsoRedirectSuppressed()) return false
 
   const appTenant = resolveAppTenant()
   const sdkTenant = localStorage.getItem('tenant') ?? ''

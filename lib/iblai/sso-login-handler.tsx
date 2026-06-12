@@ -1,26 +1,33 @@
 'use client'
 
 import { clearAuthCookies, syncAuthToCookies } from '@iblai/iblai-js/web-utils'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
+import { AppLoadingScreen } from '@/components/app-loading-screen'
+import {
+  COMPLETING_LOGIN_MESSAGE,
+  markSsoRedirectSuppression,
+} from '@/lib/iblai/auth-utils'
 import { LocalStorageService } from '@/lib/iblai/storage-service'
 
-const LOCAL_STORAGE_KEYS = {
-  CURRENT_TENANT: 'current_tenant',
-  USER_DATA: 'userData',
-  TENANTS: 'tenants',
-  AXD_TOKEN: 'axd_token',
-  AXD_TOKEN_EXPIRES: 'axd_token_expires',
-  DM_TOKEN: 'dm_token',
-  DM_TOKEN_EXPIRES: 'dm_token_expires',
-  EDX_TOKEN_KEY: 'edx_jwt_token',
-} as const
-
-export const SSO_HANDOFF_KEY = 'ibl_sso_handoff'
 const SSO_PROCESSING_KEY = 'ibl_sso_processing'
 
 const storageService = LocalStorageService.getInstance()
+
+function resolveTenantKey(data: Record<string, string>): string | undefined {
+  if (data.tenant) return data.tenant
+
+  if (data.current_tenant) {
+    try {
+      const parsed = JSON.parse(data.current_tenant) as { key?: string }
+      if (parsed.key) return parsed.key
+    } catch {
+      return data.current_tenant
+    }
+  }
+
+  return undefined
+}
 
 async function initializeLocalStorageWithObject(data: Record<string, string>) {
   clearAuthCookies()
@@ -28,13 +35,16 @@ async function initializeLocalStorageWithObject(data: Record<string, string>) {
   localStorage.removeItem('visiting_tenant')
   localStorage.removeItem('current_tenant')
   localStorage.removeItem('tenants')
+  localStorage.removeItem('app_tenant')
 
   Object.entries(data).forEach(([key, value]) => {
     localStorage.setItem(key, value)
   })
 
-  if (data.tenant) {
-    localStorage.setItem('tenant', data.tenant)
+  const tenantKey = resolveTenantKey(data)
+  if (tenantKey) {
+    localStorage.setItem('tenant', tenantKey)
+    localStorage.setItem('app_tenant', tenantKey)
   }
 
   await syncAuthToCookies(storageService)
@@ -49,10 +59,12 @@ export function SsoLoginHandler({
   redirectPathKey = 'redirectTo',
   defaultRedirectPath = '/app',
 }: SsoLoginHandlerProps) {
-  const searchParams = useSearchParams()
-  const router = useRouter()
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
+
+    const searchParams = new URLSearchParams(window.location.search)
     const queryParamData = searchParams.get('data')
     if (!queryParamData) return
 
@@ -61,22 +73,23 @@ export function SsoLoginHandler({
 
     const parsedData = JSON.parse(queryParamData) as Record<string, string>
 
-    initializeLocalStorageWithObject(parsedData).then(() => {
+    initializeLocalStorageWithObject(parsedData).then(async () => {
       const redirectPath =
         localStorage.getItem(redirectPathKey) ||
         searchParams.get('redirect-path') ||
         defaultRedirectPath
 
       localStorage.removeItem(redirectPathKey)
-      sessionStorage.setItem(SSO_HANDOFF_KEY, '1')
+      markSsoRedirectSuppression()
       sessionStorage.removeItem(SSO_PROCESSING_KEY)
-      router.replace(redirectPath)
-    })
-  }, [searchParams, redirectPathKey, defaultRedirectPath, router])
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-white">
-      <p className="text-sm text-gray-400">Completing login…</p>
-    </div>
-  )
+      // Match SDK timing so cookies/localStorage are settled before navigation.
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      window.location.href = `${window.location.origin}${redirectPath}`
+    })
+  }, [redirectPathKey, defaultRedirectPath])
+
+  if (!mounted) return null
+
+  return <AppLoadingScreen message={COMPLETING_LOGIN_MESSAGE} />
 }
