@@ -252,7 +252,7 @@ export function ProjectsPage() {
             !showCreateButton && 'justify-start',
           )}
         >
-          <h1 className="text-[22px] font-semibold tracking-tight text-ibl-neutral md:text-[28px]">
+          <h1 className="text-[19px] font-semibold tracking-tight text-ibl-neutral">
             {pageTitle}
           </h1>
           {showCreateButton ? (

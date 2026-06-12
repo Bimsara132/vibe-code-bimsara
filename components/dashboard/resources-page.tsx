@@ -12,7 +12,7 @@ export function ResourcesPage() {
     >
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-8 md:px-8 md:py-10">
         <header className="mb-8">
-          <h1 className="text-[28px] font-semibold tracking-tight text-ibl-neutral">
+          <h1 className="text-[19px] font-semibold tracking-tight text-ibl-neutral">
             Resources
           </h1>
           <p className="mt-1 text-[15px] text-[#9ca3af]">
