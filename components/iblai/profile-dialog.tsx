@@ -11,18 +11,14 @@ import { useIblaiUser } from '@/lib/iblai/use-iblai-user'
 
 export function ProfileDialog() {
   const { profileOpen, setProfileOpen } = useOnyxUI()
-  const { email } = useIblaiUser()
+  const { email, username } = useIblaiUser()
 
   const session = useMemo(() => {
-    if (!profileOpen) {
-      return {
-        tenantKey: '',
-        tenants: [] as ReturnType<typeof readTenants>,
-        isAdmin: false,
-      }
-    }
+    if (!profileOpen) return null
 
     const tenantKey = resolveAppTenant()
+    if (!tenantKey) return null
+
     const tenants = readTenants()
     const match = tenants.find((tenant) => tenant.key === tenantKey)
 
@@ -33,17 +29,17 @@ export function ProfileDialog() {
     }
   }, [profileOpen])
 
-  if (!session.tenantKey) return null
+  if (!profileOpen || !session || !username) return null
 
   return (
     <UserProfileModal
-      isOpen={profileOpen}
+      isOpen
       onClose={() => setProfileOpen(false)}
       params={{
         tenantKey: session.tenantKey,
         isAdmin: session.isAdmin,
       }}
-      email={email}
+      email={email ?? ''}
       mainPlatformKey={config.mainTenantKey() || session.tenantKey}
       tenants={session.tenants}
       authURL={config.authUrl()}

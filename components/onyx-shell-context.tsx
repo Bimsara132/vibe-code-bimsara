@@ -14,6 +14,8 @@ type OnyxUIContextValue = {
   setCreateProjectOpen: (open: boolean) => void
   profileOpen: boolean
   setProfileOpen: (open: boolean) => void
+  homeChatResetSeq: number
+  resetHomeChat: () => void
 }
 
 const OnyxUIContext = React.createContext<OnyxUIContextValue | null>(null)
@@ -24,6 +26,7 @@ export function OnyxUIProvider({ children }: { children: React.ReactNode }) {
   const [connectorsOpen, setConnectorsOpen] = React.useState(false)
   const [createProjectOpen, setCreateProjectOpen] = React.useState(false)
   const [profileOpen, setProfileOpen] = React.useState(false)
+  const [homeChatResetSeq, setHomeChatResetSeq] = React.useState(0)
 
   const value = React.useMemo(
     () => ({
@@ -38,8 +41,10 @@ export function OnyxUIProvider({ children }: { children: React.ReactNode }) {
       setCreateProjectOpen,
       profileOpen,
       setProfileOpen,
+      homeChatResetSeq,
+      resetHomeChat: () => setHomeChatResetSeq((prev) => prev + 1),
     }),
-    [sidebarCollapsed, searchOpen, connectorsOpen, createProjectOpen, profileOpen],
+    [sidebarCollapsed, searchOpen, connectorsOpen, createProjectOpen, profileOpen, homeChatResetSeq],
   )
 
   return <OnyxUIContext.Provider value={value}>{children}</OnyxUIContext.Provider>

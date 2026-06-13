@@ -5,7 +5,12 @@
  */
 
 import { initializeDataLayer } from '@iblai/iblai-js/data-layer'
-import { AuthProvider, TenantProvider, syncAuthToCookies } from '@iblai/iblai-js/web-utils'
+import {
+  AuthProvider,
+  ServiceWorkerProvider,
+  TenantProvider,
+  syncAuthToCookies,
+} from '@iblai/iblai-js/web-utils'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Provider as ReduxProvider } from 'react-redux'
@@ -200,38 +205,40 @@ export function IblaiProviders({ children }: { children: ReactNode }) {
   return (
     <>
       <ReduxProvider store={iblaiStore}>
-        <AuthProvider
-          skip={isSsoRoute}
-          skipAuthCheck={blockAuthRedirects}
-          redirectToAuthSpa={redirectToAuthSpa}
-          hasNonExpiredAuthToken={hasNonExpiredAuthToken}
-          username={username}
-          pathname={pathname ?? '/'}
-          storageService={storageService}
-          middleware={PUBLIC_ROUTES}
-          enableStorageSync={allowStorageSync}
-          onAuthSuccess={dismissCompletingLogin}
-          fallback={
-            <AuthLoadingFallback completingLogin={completingLoginVisible} />
-          }
-        >
-          <TenantProvider
+        <ServiceWorkerProvider>
+          <AuthProvider
             skip={isSsoRoute}
-            skipCustomDomainCheck
-            currentTenant={tenantKey}
-            requestedTenant={tenantKey}
-            saveCurrentTenant={saveCurrentTenant}
-            saveUserTenants={(t: unknown) =>
-              localStorage.setItem('tenants', JSON.stringify(t))
-            }
-            handleTenantSwitch={handleTenantSwitch}
+            skipAuthCheck={blockAuthRedirects}
             redirectToAuthSpa={redirectToAuthSpa}
+            hasNonExpiredAuthToken={hasNonExpiredAuthToken}
             username={username}
-            fallback={null}
+            pathname={pathname ?? '/'}
+            storageService={storageService}
+            middleware={PUBLIC_ROUTES}
+            enableStorageSync={allowStorageSync}
+            onAuthSuccess={dismissCompletingLogin}
+            fallback={
+              <AuthLoadingFallback completingLogin={completingLoginVisible} />
+            }
           >
-            {children}
-          </TenantProvider>
-        </AuthProvider>
+            <TenantProvider
+              skip={isSsoRoute}
+              skipCustomDomainCheck
+              currentTenant={tenantKey}
+              requestedTenant={tenantKey}
+              saveCurrentTenant={saveCurrentTenant}
+              saveUserTenants={(t: unknown) =>
+                localStorage.setItem('tenants', JSON.stringify(t))
+              }
+              handleTenantSwitch={handleTenantSwitch}
+              redirectToAuthSpa={redirectToAuthSpa}
+              username={username}
+              fallback={null}
+            >
+              {children}
+            </TenantProvider>
+          </AuthProvider>
+        </ServiceWorkerProvider>
       </ReduxProvider>
       {completingLoginVisible ? <CompletingLoginOverlay /> : null}
     </>

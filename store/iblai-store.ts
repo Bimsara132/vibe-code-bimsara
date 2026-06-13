@@ -9,16 +9,26 @@ import {
   mentorReducer,
 } from '@iblai/iblai-js/data-layer'
 import {
+  chatInputSliceReducer,
   chatSliceReducerShared,
   filesReducer,
+  hostChatReducer,
+  rbacReducer,
+  subscriptionReducer,
+  topBannerReducer,
 } from '@iblai/iblai-js/web-utils'
 
 export const iblaiStore = configureStore({
   reducer: {
-    [coreApiSlice.reducerPath]: coreApiSlice.reducer,
-    ...mentorReducer,
+    chat: hostChatReducer,
+    chatInput: chatInputSliceReducer,
     chatSliceShared: chatSliceReducerShared,
     files: filesReducer,
+    rbac: rbacReducer,
+    subscription: subscriptionReducer,
+    topBanner: topBannerReducer,
+    [coreApiSlice.reducerPath]: coreApiSlice.reducer,
+    ...mentorReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false })

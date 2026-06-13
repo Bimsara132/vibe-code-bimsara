@@ -1,6 +1,8 @@
 'use client'
 
 const PARALLAX_FACTOR = 1.45
+const GRADIENT_TOP_OFFSET = '14vh'
+const GRADIENT_OPACITY = 0.72
 
 type LovableBackgroundProps = {
   scrollY?: number
@@ -17,7 +19,7 @@ export function LovableBackground({ scrollY = 0 }: LovableBackgroundProps) {
             <div
               className="absolute will-change-transform"
               style={{
-                top: 'calc(50vh - 75vw)',
+                top: `calc(50vh - 75vw + ${GRADIENT_TOP_OFFSET})`,
                 width: '200vw',
                 aspectRatio: '0.991736 / 1',
                 left: 'calc(50% + 0px)',
@@ -29,7 +31,7 @@ export function LovableBackground({ scrollY = 0 }: LovableBackgroundProps) {
                 alt=""
                 src="/bg_gradient.png"
                 className="absolute inset-0 h-full w-full object-contain"
-                style={{ filter: 'blur(4px)' }}
+                style={{ filter: 'blur(4px)', opacity: GRADIENT_OPACITY }}
                 aria-hidden
               />
             </div>

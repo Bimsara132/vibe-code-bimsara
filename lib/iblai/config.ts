@@ -18,6 +18,8 @@ const env = {
   NEXT_PUBLIC_PLATFORM_BASE_DOMAIN:
     process.env.NEXT_PUBLIC_PLATFORM_BASE_DOMAIN,
   NEXT_PUBLIC_MAIN_TENANT_KEY: process.env.NEXT_PUBLIC_MAIN_TENANT_KEY,
+  NEXT_PUBLIC_DEFAULT_AGENT_ID: process.env.NEXT_PUBLIC_DEFAULT_AGENT_ID,
+  NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
   NEXT_PUBLIC_TAURI_CUSTOM_SCHEME: process.env.NEXT_PUBLIC_TAURI_CUSTOM_SCHEME,
 }
 
@@ -64,6 +66,8 @@ const config = {
     getEnv('NEXT_PUBLIC_BASE_WS_URL', `wss://asgi.data.${domain()}`),
 
   mainTenantKey: () => getEnv('NEXT_PUBLIC_MAIN_TENANT_KEY', ''),
+  defaultAgentId: () => getEnv('NEXT_PUBLIC_DEFAULT_AGENT_ID', ''),
+  supportEmail: () => getEnv('NEXT_PUBLIC_SUPPORT_EMAIL', 'support@ibl.ai'),
   tauriCustomScheme: () => getEnv('NEXT_PUBLIC_TAURI_CUSTOM_SCHEME', ''),
   platformBaseDomain: () => domain(),
 }

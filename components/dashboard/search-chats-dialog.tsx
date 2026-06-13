@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 import { useOnyxUI } from '@/components/onyx-shell-context'
+import { useRecentChats } from '@/lib/iblai/use-recent-chats'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
@@ -35,21 +36,7 @@ type SearchItem = {
   }
 }
 
-const SEARCH_ITEMS: SearchItem[] = [
-  {
-    id: 'hello-friend',
-    label: 'Hello Friend',
-    section: 'recent',
-    icon: Gem,
-    href: '/app',
-    detail: {
-      createdBy: 'Bimsara Marapana',
-      status: 'Private',
-      created: '3 days ago',
-      lastEdited: '3 days ago',
-      lastOpened: '3 days ago',
-    },
-  },
+const STATIC_SEARCH_ITEMS: SearchItem[] = [
   {
     id: 'dashboard',
     label: 'Dashboard',
@@ -90,7 +77,7 @@ const SEARCH_ITEMS: SearchItem[] = [
 ]
 
 const SECTION_LABELS = {
-  recent: 'Recent projects',
+  recent: 'Recent chats',
   navigate: 'Navigate to',
   settings: 'Settings',
 } as const
@@ -223,25 +210,36 @@ function ProjectPreview({ item }: { item: SearchItem }) {
 export function SearchChatsDialog() {
   const router = useRouter()
   const { searchOpen, setSearchOpen, setCreateProjectOpen } = useOnyxUI()
+  const { items: recentChats } = useRecentChats()
   const [query, setQuery] = React.useState('')
-  const [selectedId, setSelectedId] = React.useState('hello-friend')
+  const [selectedId, setSelectedId] = React.useState('')
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const searchItems = React.useMemo(() => {
+    const recent: SearchItem[] = recentChats.map((chat) => ({
+      id: chat.id,
+      label: chat.label,
+      section: 'recent',
+      icon: Gem,
+      href: chat.href,
+    }))
+
+    return [...recent, ...STATIC_SEARCH_ITEMS]
+  }, [recentChats])
 
   const filteredItems = React.useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return SEARCH_ITEMS
-    return SEARCH_ITEMS.filter((item) => item.label.toLowerCase().includes(q))
-  }, [query])
+    if (!q) return searchItems
+    return searchItems.filter((item) => item.label.toLowerCase().includes(q))
+  }, [query, searchItems])
 
   const selectedItem =
-    filteredItems.find((item) => item.id === selectedId) ??
-    filteredItems[0] ??
-    SEARCH_ITEMS[0]
+    filteredItems.find((item) => item.id === selectedId) ?? filteredItems[0]
 
   React.useEffect(() => {
     if (!searchOpen) {
       setQuery('')
-      setSelectedId('hello-friend')
+      setSelectedId('')
       return
     }
     const frame = requestAnimationFrame(() => inputRef.current?.focus())
@@ -249,7 +247,7 @@ export function SearchChatsDialog() {
   }, [searchOpen])
 
   React.useEffect(() => {
-    if (!filteredItems.some((item) => item.id === selectedId) && filteredItems[0]) {
+    if (!selectedId && filteredItems[0]) {
       setSelectedId(filteredItems[0].id)
     }
   }, [filteredItems, selectedId])

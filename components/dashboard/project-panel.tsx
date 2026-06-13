@@ -49,7 +49,7 @@ export function ProjectPanel() {
         </div>
         <Link
           href="/app/resources"
-          className="hidden h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-sm font-normal text-neutral-900 transition-colors hover:bg-black/[0.04] md:flex"
+          className="hidden h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-sm font-normal text-ibl-neutral transition-colors hover:bg-black/[0.04] md:flex"
         >
           <span className="px-0.5">Browse all</span>
           <ArrowRight className="size-5" />

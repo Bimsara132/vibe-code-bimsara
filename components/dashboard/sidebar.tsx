@@ -91,6 +91,7 @@ import { DiscordIntegrationMarkIcon } from '@/components/icons/discord-integrati
 import { SlackIntegrationMarkIcon } from '@/components/icons/slack-integration-mark-icon'
 import { VoiceSettingsIcon } from '@/components/icons/voice-settings-icon'
 import { useOnyxUI } from '@/components/onyx-shell-context'
+import { useRecentChats } from '@/lib/iblai/use-recent-chats'
 import { useProjects } from '@/components/projects-context'
 import { useIblaiUser } from '@/lib/iblai/use-iblai-user'
 import { handleLogout } from '@/lib/iblai/auth-utils'
@@ -121,10 +122,6 @@ const PROJECT_FILTER_LINKS = [
     icon: Users,
     href: '/app/projects?filter=shared',
   },
-] as const
-
-const RECENT_CHATS = [
-  { id: 'hello-friend', label: 'Hello Friend', href: '/app' },
 ] as const
 
 const navRowClassName =
@@ -1053,12 +1050,15 @@ function SidebarContentImpl({
   afterNavigate?: () => void
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { setSearchOpen, setConnectorsOpen, connectorsOpen, toggleSidebarCollapsed, setSidebarCollapsed } =
     useOnyxUI()
+  const { items: recentChats, isLoading: recentChatsLoading } = useRecentChats()
 
   const collapsed = variant === 'collapsed'
   const isAppHome = pathname === '/app'
+  const activeSessionId = searchParams.get('session')
   const isAdmin = pathname.startsWith('/app/admin')
   const isResources = pathname.startsWith('/app/resources')
   const isProjectsSection = pathname.startsWith('/app/projects')
@@ -1079,6 +1079,10 @@ function SidebarContentImpl({
   }, [adminNavFilter])
 
   const done = () => afterNavigate?.()
+
+  const startNewChat = React.useCallback(() => {
+    router.replace(`/app?new=${Date.now()}`)
+  }, [router])
 
   const expandRail = React.useCallback(() => {
     setSidebarCollapsed(false)
@@ -1160,7 +1164,10 @@ function SidebarContentImpl({
               <SidebarCollapsedLabelFlyout label="New Chat">
                 <Link
                   href="/app"
-                  onClick={done}
+                  onClick={() => {
+                    startNewChat()
+                    done()
+                  }}
                   aria-label="New Chat"
                   className={newSessionCollapsedClassName}
                 >
@@ -1239,7 +1246,7 @@ function SidebarContentImpl({
               <CollapsedNavFlyout
                 icon={MessageSquare}
                 label="Recents"
-                items={RECENT_CHATS.map((chat) => ({
+                items={recentChats.map((chat) => ({
                   id: chat.id,
                   label: chat.label,
                   href: chat.href,
@@ -1293,9 +1300,10 @@ function SidebarContentImpl({
                 href="/app"
                 icon={SquarePen}
                 label="New Chat"
-                active={isAppHome && !connectorsOpen}
+                active={isAppHome && !connectorsOpen && !activeSessionId}
                 collapsed={collapsed}
                 onClick={() => {
+                  startNewChat()
                   setConnectorsOpen(false)
                   done()
                 }}
@@ -1360,15 +1368,20 @@ function SidebarContentImpl({
             <SidebarNavDivider />
 
             <p className={SIDEBAR_SECTION_LABEL_CLASS}>Recents</p>
-            {RECENT_CHATS.map((chat) => (
-              <SidebarRecentLink
-                key={chat.id}
-                href={chat.href}
-                label={chat.label}
-                collapsed={collapsed}
-                onClick={done}
-              />
-            ))}
+            {recentChats.length === 0 && !recentChatsLoading ? (
+              <p className="px-2 py-1 text-[13px] text-[#9ca3af]">No recent chats</p>
+            ) : (
+              recentChats.map((chat) => (
+                <SidebarRecentLink
+                  key={chat.id}
+                  href={chat.href}
+                  label={chat.label}
+                  active={activeSessionId === chat.id}
+                  collapsed={collapsed}
+                  onClick={done}
+                />
+              ))
+            )}
           </div>
         )}
       </nav>

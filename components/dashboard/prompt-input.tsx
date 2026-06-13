@@ -20,9 +20,28 @@ function chipButtonClass(active: boolean) {
   )
 }
 
-export function PromptInput() {
-  const [inputValue, setInputValue] = useState('')
-  const [selectedToolType, setSelectedToolType] = useState('')
+type PromptInputProps = {
+  value?: string
+  onValueChange?: (value: string) => void
+  onSubmit?: (message: string, options?: { useCanvas?: boolean }) => void
+  placeholder?: string
+  defaultCanvasSelected?: boolean
+}
+
+export function PromptInput({
+  value,
+  onValueChange,
+  onSubmit,
+  placeholder = 'Ask anything...',
+  defaultCanvasSelected = false,
+}: PromptInputProps = {}) {
+  const [internalValue, setInternalValue] = useState('')
+  const isControlled = value !== undefined && onValueChange !== undefined
+  const inputValue = isControlled ? value : internalValue
+  const setInputValue = isControlled ? onValueChange : setInternalValue
+  const [selectedToolType, setSelectedToolType] = useState(
+    defaultCanvasSelected ? 'Canvas' : '',
+  )
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [fileAddedNotification, setFileAddedNotification] = useState<string | null>(null)
   const [isRecording, setIsRecording] = useState(false)
@@ -30,7 +49,9 @@ export function PromptInput() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inputValue.trim()) return
+    const trimmed = inputValue.trim()
+    if (!trimmed) return
+    onSubmit?.(trimmed, { useCanvas: selectedToolType === 'Canvas' })
     setInputValue('')
     if (selectedToolType !== 'Canvas') {
       setSelectedToolType('')
@@ -78,7 +99,7 @@ export function PromptInput() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="relative w-full rounded-[10px] bg-white shadow-sm">
+      <div className="relative w-full rounded-[10px] border border-black/[0.08] bg-white shadow-sm">
         {isDraggingFile && (
           <div className="pointer-events-none absolute inset-0 z-10 rounded-[10px] border-2 border-dashed border-ibl bg-ibl-soft/60" />
         )}
@@ -90,15 +111,15 @@ export function PromptInput() {
           </div>
         )}
 
-        <div className="relative flex h-[104px] flex-col overflow-hidden rounded-[10px] bg-ibl-surface">
+        <div className="relative flex h-[112px] flex-col overflow-hidden rounded-[10px] bg-ibl-surface">
           <Textarea
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Ask anything..."
-            className="min-h-0 flex-1 resize-none rounded-none rounded-t-[10px] border-0 border-none bg-transparent px-4 pt-3 pb-0 text-sm shadow-none placeholder:text-gray-400 focus-visible:ring-0 md:text-base"
+            placeholder={placeholder}
+            className="min-h-0 flex-1 resize-none rounded-none rounded-t-[10px] border-0 border-none bg-transparent px-4 pt-4 pb-0 text-sm shadow-none placeholder:text-gray-400 focus-visible:ring-0 md:text-base"
           />
 
-          <div className="flex shrink-0 items-center justify-between rounded-b-[10px] border-0 pl-1.5 pr-2 pt-1.5 pb-2 md:pl-2 md:pr-3 md:pt-2 md:pb-3">
+          <div className="flex shrink-0 items-center justify-between rounded-b-[10px] border-0 pl-1.5 pr-2 pt-2 pb-2.5 md:pl-2 md:pr-3 md:pt-2.5 md:pb-3">
             <div className="relative flex min-w-0 flex-1 items-center gap-1 overflow-x-auto pr-1.5 md:gap-1.5 md:pr-2">
               <Button
                 type="button"

@@ -67,7 +67,7 @@ export function ProjectCard({
 
   const meta = (
     <>
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-orange-500 text-sm font-semibold text-white">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-xs font-semibold text-white">
         B
       </span>
       <div className="flex min-w-0 flex-1 flex-col">

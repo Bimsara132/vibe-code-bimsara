@@ -28,7 +28,11 @@ function DashboardPage({ path }: { path: string }) {
     )
   }
 
-  return <MainContent />
+  return (
+    <Suspense fallback={null}>
+      <MainContent />
+    </Suspense>
+  )
 }
 
 export function DashboardShell() {
