@@ -13,6 +13,7 @@ const REQUIRED_SSO_KEYS = [
   'axd_token',
   'axd_token_expires',
   'dm_token',
+  'edx_jwt_token',
   'userData',
 ] as const
 

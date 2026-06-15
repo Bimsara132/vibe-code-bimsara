@@ -92,9 +92,28 @@ export function IblaiProviders({ children }: { children: ReactNode }) {
     checkTenantMismatch()
   }, [])
 
-  const handleTenantSwitch = useCallback(async () => {
-    const tenant = resolveAppTenant()
-    redirectToAuthSpa(undefined, tenant, false, true)
+  const handleTenantSwitch = useCallback(
+    async (tenant: string, saveRedirect?: boolean) => {
+      localStorage.setItem('current_tenant', JSON.stringify({ key: tenant }))
+      localStorage.setItem('tenant', tenant)
+      localStorage.setItem('app_tenant', tenant)
+
+      if (saveRedirect && typeof window !== 'undefined') {
+        localStorage.setItem(
+          'redirectTo',
+          `${window.location.pathname}${window.location.search}`,
+        )
+      }
+
+      await syncAuthToCookies(storageService)
+      window.location.reload()
+    },
+    [],
+  )
+
+  const handleTenantAuthFailure = useCallback((message: string) => {
+    console.error('[ibl.ai] Tenant bootstrap failed:', message)
+    window.location.href = '/login'
   }, [])
 
   if (!isInitialized) {
@@ -127,6 +146,7 @@ export function IblaiProviders({ children }: { children: ReactNode }) {
             handleTenantSwitch={handleTenantSwitch}
             redirectToAuthSpa={redirectToAuthSpa}
             username={username}
+            onAuthFailure={handleTenantAuthFailure}
             fallback={<AppLoadingScreen />}
           >
             {children}
