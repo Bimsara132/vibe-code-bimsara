@@ -21,6 +21,7 @@ const env = {
   NEXT_PUBLIC_DEFAULT_AGENT_ID: process.env.NEXT_PUBLIC_DEFAULT_AGENT_ID,
   NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
   NEXT_PUBLIC_TAURI_CUSTOM_SCHEME: process.env.NEXT_PUBLIC_TAURI_CUSTOM_SCHEME,
+  NEXT_PUBLIC_IBL_SSO_CLIENT_ID: process.env.NEXT_PUBLIC_IBL_SSO_CLIENT_ID,
 }
 
 declare global {
@@ -40,6 +41,13 @@ const domain = () =>
 
 const config = {
   authUrl: () => getEnv('NEXT_PUBLIC_AUTH_URL', `https://login.${domain()}`),
+
+  /** OAuth client used by login.iblai.app for Google / Apple SSO handoff. */
+  ssoClientId: () =>
+    getEnv(
+      'NEXT_PUBLIC_IBL_SSO_CLIENT_ID',
+      'lXQ7MrnumvXXb79zgIwdpcovRRqE4OzyOOUXKdVs',
+    ),
 
   lmsUrl: () => {
     const apiBase = getEnv('NEXT_PUBLIC_API_BASE_URL')

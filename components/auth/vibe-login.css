@@ -1,0 +1,292 @@
+.vibe-login {
+  --ibl: #38a1e5;
+  --ibl-indigo: #7284ff;
+  --accent: #0078ff;
+  --page-bg: #f5f7fa;
+  --title-color: #4e5460;
+  --text-muted: #6b7280;
+  --card-bg: #f5f8ff;
+  --card-border: rgba(115, 185, 255, 0.3);
+  --card-radius: 0.8rem;
+  --card-shadow: 0 0.125rem 1.25rem 0.3125rem rgba(115, 185, 255, 0.23);
+  --btn-radius: 0.4375rem;
+  --btn-primary-from: #baceff;
+  --btn-primary-to: #0078ff;
+  --btn-primary-hover-from: #a9bdff;
+  --btn-primary-hover-to: #0069e0;
+  --input-border: #e5e7eb;
+  --section-gap: 3.5rem;
+  --logo-h: 4rem;
+  --control-h: 3.25rem;
+  --control-font: 1.0625rem;
+  --card-pad: 1.625rem;
+  --stack-gap: 1.375rem;
+  --brand-font: 2.625rem;
+
+  min-height: 100%;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding:
+    env(safe-area-inset-top, 0px)
+    max(1rem, env(safe-area-inset-right, 0px))
+    max(1rem, env(safe-area-inset-bottom, 0px))
+    max(1rem, env(safe-area-inset-left, 0px));
+  overflow-y: auto;
+  background: var(--page-bg);
+  color: var(--title-color);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+@media (min-width: 1024px) {
+  .vibe-login {
+    max-width: none;
+    margin: 1rem;
+    min-height: calc(100dvh - 2rem);
+    padding:
+      env(safe-area-inset-top, 0px)
+      1.5rem
+      max(2.5rem, env(safe-area-inset-bottom, 0px))
+      1.5rem;
+  }
+}
+
+.vibe-login__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  padding-top: var(--section-gap);
+  padding-bottom: max(2.5rem, env(safe-area-inset-bottom, 0px));
+  gap: calc(var(--section-gap) - 0.5rem);
+}
+
+.vibe-login__logo-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.vibe-login__logo {
+  height: var(--logo-h);
+  width: auto;
+  object-fit: contain;
+}
+
+.vibe-login__brand {
+  font-size: var(--brand-font);
+  font-weight: 700;
+  text-transform: lowercase;
+  background: linear-gradient(to right, var(--ibl), var(--ibl-indigo));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  letter-spacing: -0.02em;
+}
+
+.vibe-login__main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--section-gap);
+  width: 100%;
+}
+
+.vibe-login__hero {
+  text-align: center;
+  width: 100%;
+}
+
+.vibe-login__title {
+  font-size: 38px;
+  font-weight: 400;
+  color: var(--title-color);
+  line-height: 1.25;
+  max-width: 24ch;
+  margin: 0 auto 0.5rem;
+}
+
+.vibe-login__tagline {
+  font-size: 1.0625rem;
+  color: var(--text-muted);
+  line-height: 1.375;
+  margin: 0 auto;
+  padding: 0 0.25rem;
+}
+
+.vibe-login__tagline-lead,
+.vibe-login__tagline-rest {
+  font-size: 20px;
+}
+
+.vibe-login__tagline-rest {
+  display: block;
+}
+
+@media (min-width: 640px) {
+  .vibe-login__title {
+    white-space: nowrap;
+  }
+
+  .vibe-login__tagline-rest {
+    display: inline;
+  }
+}
+
+.vibe-login__card {
+  width: 100%;
+  max-width: 34rem;
+  padding: var(--card-pad);
+  border-radius: var(--card-radius);
+  border: 0.25px solid var(--card-border);
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.vibe-login__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--stack-gap);
+}
+
+.vibe-login__input {
+  width: 100%;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  padding: 0 0.875rem;
+  font-size: var(--control-font);
+  color: var(--title-color);
+  background: #fff;
+  border: 1px solid var(--input-border);
+  border-radius: var(--btn-radius);
+  outline: none;
+}
+
+.vibe-login__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 120, 255, 0.15);
+}
+
+.vibe-login__input--error {
+  border: 2px solid #3b82f6;
+}
+
+.vibe-login__error {
+  color: var(--accent);
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+.vibe-login__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  width: 100%;
+  height: var(--control-h);
+  min-height: var(--control-h);
+  font-size: var(--control-font);
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.vibe-login__btn--primary {
+  border: 0;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(to right, var(--btn-primary-from), var(--btn-primary-to));
+}
+
+.vibe-login__btn--primary:hover:not(:disabled) {
+  background: linear-gradient(
+    to right,
+    var(--btn-primary-hover-from),
+    var(--btn-primary-hover-to)
+  );
+}
+
+.vibe-login__btn--outline {
+  font-weight: 500;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.vibe-login__btn--outline:hover:not(:disabled) {
+  background: #fafafa;
+  border-color: #d1d5db;
+}
+
+.vibe-login__btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.vibe-login__divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 1.0625rem;
+  padding: 0.25rem 0;
+}
+
+.vibe-login__legal {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.vibe-login__legal a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.vibe-login__legal a:hover {
+  text-decoration: underline;
+}
+
+.vibe-login__legal .sep {
+  margin: 0 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .vibe-login {
+    max-width: 100%;
+  }
+
+  .vibe-login__logo-row {
+    gap: 0.5rem;
+  }
+
+  .vibe-login__title {
+    max-width: none;
+    font-size: 24px;
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+  }
+
+  .vibe-login__tagline {
+    font-size: 0.8125rem;
+    line-height: 1.3;
+  }
+
+  .vibe-login__tagline-lead,
+  .vibe-login__tagline-rest {
+    font-size: 14px;
+  }
+
+  .vibe-login__divider {
+    font-size: 0.875rem;
+    padding: 0;
+  }
+
+  .vibe-login__legal {
+    font-size: 0.625rem;
+  }
+
+  .vibe-login__input {
+    font-size: max(16px, var(--control-font));
+  }
+}

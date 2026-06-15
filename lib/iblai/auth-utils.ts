@@ -100,18 +100,29 @@ export async function redirectToAuthSpa(
   const redirectOrigin = getRedirectOrigin()
   const path =
     redirectTo ??
-    (typeof window !== 'undefined' ? window.location.pathname : '/')
+    (typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '/')
 
-  if (saveRedirect) {
-    localStorage.setItem('redirectTo', path)
+  if (logout) {
+    const tenant = platformKey || resolveAppTenant()
+    window.location.href = `${config.authUrl()}/logout?redirect-to=${redirectOrigin}&tenant=${encodeURIComponent(tenant)}`
+    return
   }
 
-  const tenant = platformKey || resolveAppTenant()
-  let authUrl = `${config.authUrl()}/login?app=custom&redirect-to=${redirectOrigin}`
-  if (tenant) authUrl += `&tenant=${encodeURIComponent(tenant)}`
-  if (logout) authUrl += '&logout=1'
+  if (saveRedirect !== false) {
+    if (
+      !path.startsWith('/sso-login') &&
+      !path.startsWith('/sso-login-complete') &&
+      !path.startsWith('/login')
+    ) {
+      localStorage.setItem('redirectTo', path)
+    }
+  }
 
-  window.location.href = authUrl
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login'
+  }
 }
 
 export function handleAuthHttp401() {

@@ -37,6 +37,7 @@ const storageService = LocalStorageService.getInstance()
 
 const PUBLIC_ROUTES = new Map<RegExp, () => Promise<boolean>>([
   [new RegExp('^/sso-login'), async () => false],
+  [new RegExp('^/login'), async () => false],
 ])
 
 function AuthLoadingFallback({ completingLogin }: { completingLogin?: boolean }) {

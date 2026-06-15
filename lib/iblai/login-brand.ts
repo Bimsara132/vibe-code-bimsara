@@ -1,0 +1,23 @@
+export const LOGIN_BRAND = {
+  pageTitle: 'vibe.ibl.ai — Sign in',
+  logoUrl: '/logo.png',
+  brandName: 'vibe.ibl.ai',
+  title: 'The Secure Personal Agent',
+  taglineLead: 'Build to be autonomous and efficient.',
+  taglineRest: 'Deployed in containers.',
+  emailPlaceholder: 'Enter your email',
+  primaryButtonText: 'Continue with email',
+  termsUrl: 'https://ibl.ai/terms-of-use',
+  privacyUrl: 'https://ibl.ai/privacy-policy',
+  sectionGap: '3.1rem',
+  sectionGapMobile: '2rem',
+  colors: {
+    ibl: '#38A1E5',
+    iblIndigo: '#7284FF',
+    accent: '#0078FF',
+    btnPrimaryFrom: '#BACEFF',
+    btnPrimaryTo: '#0078FF',
+    btnPrimaryHoverFrom: '#A9BDFF',
+    btnPrimaryHoverTo: '#0069E0',
+  },
+} as const

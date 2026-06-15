@@ -10,8 +10,10 @@ import {
   Gem,
   History,
   Home,
+  LayoutGrid,
   Plus,
   Settings,
+  Users,
 } from 'lucide-react'
 
 import { useOnyxUI } from '@/components/onyx-shell-context'
@@ -26,14 +28,7 @@ type SearchItem = {
   icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>
   href?: string
   external?: boolean
-  action?: 'create-project'
-  detail?: {
-    createdBy: string
-    status: string
-    created: string
-    lastEdited: string
-    lastOpened: string
-  }
+  action?: 'create-project' | 'open-profile'
 }
 
 const STATIC_SEARCH_ITEMS: SearchItem[] = [
@@ -74,6 +69,20 @@ const STATIC_SEARCH_ITEMS: SearchItem[] = [
     icon: Settings,
     href: '/app/settings',
   },
+  {
+    id: 'people',
+    label: 'People',
+    section: 'settings',
+    icon: Users,
+    action: 'open-profile',
+  },
+  {
+    id: 'templates',
+    label: 'Templates',
+    section: 'settings',
+    icon: LayoutGrid,
+    href: '/app/resources',
+  },
 ]
 
 const SECTION_LABELS = {
@@ -82,7 +91,7 @@ const SECTION_LABELS = {
   settings: 'Settings',
 } as const
 
-const searchRowActiveClass = 'btn-primary-gradient font-medium text-white'
+const searchRowActiveClass = 'btn-primary-gradient font-medium text-white shadow-sm'
 
 const searchRowHoverClass =
   'btn-primary-gradient-ghost transition-[background,color] duration-150 hover:font-medium hover:text-white'
@@ -98,47 +107,35 @@ function SearchResultRow({
 }) {
   const Icon = item.icon
 
-  const highlighted = item.section === 'navigate'
-
   return (
     <button
       type="button"
       onClick={onSelect}
-      onMouseEnter={highlighted ? onSelect : undefined}
+      onMouseEnter={onSelect}
       className={cn(
-        'group flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition-[background,color] duration-150',
+        'group flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-left text-sm transition-[background,color] duration-150',
         selected
           ? searchRowActiveClass
-          : highlighted
-            ? cn('text-neutral-800', searchRowHoverClass)
-            : 'text-neutral-800 hover:bg-neutral-100',
+          : cn('text-neutral-800', searchRowHoverClass),
       )}
     >
       {Icon ? (
         <Icon
           className={cn(
-            'size-4 shrink-0',
-            selected
-              ? 'text-white'
-              : highlighted
-                ? 'text-neutral-500 group-hover:text-white'
-                : 'text-neutral-500',
+            'size-[18px] shrink-0',
+            selected ? 'text-white' : 'text-neutral-500 group-hover:text-white',
           )}
           strokeWidth={1.75}
         />
       ) : (
-        <span className="size-4 shrink-0" />
+        <span className="size-[18px] shrink-0" />
       )}
       <span className="min-w-0 flex-1 truncate">{item.label}</span>
       {item.external ? (
         <ExternalLink
           className={cn(
-            'size-3.5 shrink-0',
-            selected
-              ? 'text-white/90'
-              : highlighted
-                ? 'text-neutral-400 group-hover:text-white/90'
-                : 'text-neutral-400',
+            'size-4 shrink-0',
+            selected ? 'text-white/90' : 'text-neutral-400 group-hover:text-white/90',
           )}
           strokeWidth={2}
         />
@@ -147,69 +144,9 @@ function SearchResultRow({
   )
 }
 
-function hidesPreviewPlaceholder(item: SearchItem) {
-  return item.section === 'navigate' && !item.detail
-}
-
-function ProjectPreview({ item }: { item: SearchItem }) {
-  if (!item.detail) {
-    if (hidesPreviewPlaceholder(item)) {
-      return <div className="flex flex-1" aria-hidden />
-    }
-
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center px-5 text-center text-[13px] text-neutral-500">
-        Select an item to see details
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4">
-      <div className="mb-3 flex h-[100px] w-full items-center justify-center overflow-hidden rounded-lg border border-black/[0.06] bg-neutral-100">
-        <Image
-          src="/logo.png"
-          alt=""
-          width={36}
-          height={36}
-          className="size-9 object-contain opacity-25"
-          aria-hidden
-        />
-      </div>
-
-      <h2 className="mb-3 text-[17px] font-semibold tracking-tight text-neutral-900">
-        {item.label}
-      </h2>
-
-      <dl className="grid grid-cols-2 gap-x-5 gap-y-2.5 text-[12px]">
-        <div>
-          <dt className="mb-0.5 text-neutral-500">Created by</dt>
-          <dd className="text-neutral-900">{item.detail.createdBy}</dd>
-        </div>
-        <div>
-          <dt className="mb-0.5 text-neutral-500">Status</dt>
-          <dd className="text-neutral-900">{item.detail.status}</dd>
-        </div>
-        <div>
-          <dt className="mb-0.5 text-neutral-500">Created</dt>
-          <dd className="text-neutral-900">{item.detail.created}</dd>
-        </div>
-        <div>
-          <dt className="mb-0.5 text-neutral-500">Last edited</dt>
-          <dd className="text-neutral-900">{item.detail.lastEdited}</dd>
-        </div>
-        <div className="col-span-2">
-          <dt className="mb-0.5 text-neutral-500">Last opened</dt>
-          <dd className="text-neutral-900">{item.detail.lastOpened}</dd>
-        </div>
-      </dl>
-    </div>
-  )
-}
-
 export function SearchChatsDialog() {
   const router = useRouter()
-  const { searchOpen, setSearchOpen, setCreateProjectOpen } = useOnyxUI()
+  const { searchOpen, setSearchOpen, setCreateProjectOpen, setProfileOpen } = useOnyxUI()
   const { items: recentChats } = useRecentChats()
   const [query, setQuery] = React.useState('')
   const [selectedId, setSelectedId] = React.useState('')
@@ -261,6 +198,12 @@ export function SearchChatsDialog() {
       return
     }
 
+    if (selectedItem.action === 'open-profile') {
+      setSearchOpen(false)
+      setProfileOpen(true)
+      return
+    }
+
     if (selectedItem.external && selectedItem.href) {
       window.open(selectedItem.href, '_blank', 'noopener,noreferrer')
       setSearchOpen(false)
@@ -271,9 +214,23 @@ export function SearchChatsDialog() {
       setSearchOpen(false)
       router.push(selectedItem.href)
     }
-  }, [router, selectedItem, setCreateProjectOpen, setSearchOpen])
+  }, [router, selectedItem, setCreateProjectOpen, setProfileOpen, setSearchOpen])
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault()
+      if (filteredItems.length === 0) return
+
+      const currentIndex = filteredItems.findIndex((item) => item.id === selectedId)
+      const nextIndex =
+        event.key === 'ArrowDown'
+          ? (currentIndex + 1) % filteredItems.length
+          : (currentIndex - 1 + filteredItems.length) % filteredItems.length
+
+      setSelectedId(filteredItems[nextIndex]?.id ?? filteredItems[0].id)
+      return
+    }
+
     if (event.key === 'Enter') {
       event.preventDefault()
       openSelected()
@@ -289,75 +246,60 @@ export function SearchChatsDialog() {
     <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
       <DialogContent
         showCloseButton={false}
-        className="max-h-[min(520px,calc(100dvh-2rem))] max-w-[min(680px,calc(100vw-2rem))] gap-0 overflow-hidden rounded-xl border border-neutral-200 bg-white p-0 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.3)]"
+        className="max-h-[min(600px,calc(100dvh-2rem))] max-w-[min(560px,calc(100vw-2rem))] gap-0 overflow-hidden rounded-xl border border-[rgba(115,185,255,0.28)] bg-[#fafcff] p-0 shadow-[0_20px_60px_-20px_rgba(0,120,255,0.22)]"
       >
-        <div className="border-b border-neutral-200 px-4 py-3">
+        <div className="border-b border-[rgba(115,185,255,0.2)] bg-white px-5 py-3.5">
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search..."
-            className="w-full border-0 bg-transparent text-[14px] text-neutral-900 outline-none placeholder:text-neutral-400"
+            className="w-full border-0 bg-transparent text-[15px] text-neutral-900 outline-none placeholder:text-neutral-400"
             aria-label="Search"
           />
         </div>
 
-        <div className="grid min-h-[300px] grid-cols-[minmax(0,220px)_1fr]">
-          <div className="min-h-0 overflow-y-auto border-r border-neutral-200 px-2.5 py-2.5">
-            {sections.map(({ section, items }) =>
-              items.length > 0 ? (
-                <div key={section} className="mb-3 last:mb-0">
-                  <p className="mb-1 px-1.5 text-[10px] font-medium text-neutral-500">
-                    {SECTION_LABELS[section]}
-                  </p>
-                  <div className="space-y-0.5">
-                    {items.map((item) => (
-                      <SearchResultRow
-                        key={item.id}
-                        item={item}
-                        selected={selectedItem.id === item.id}
-                        onSelect={() => setSelectedId(item.id)}
-                      />
-                    ))}
-                  </div>
+        <div className="min-h-[320px] overflow-y-auto px-3 py-3">
+          {sections.map(({ section, items }) =>
+            items.length > 0 ? (
+              <div key={section} className="mb-3.5 last:mb-0">
+                <p className="mb-1.5 px-2 text-[11px] font-medium text-neutral-500">
+                  {SECTION_LABELS[section]}
+                </p>
+                <div className="space-y-1">
+                  {items.map((item) => (
+                    <SearchResultRow
+                      key={item.id}
+                      item={item}
+                      selected={selectedItem?.id === item.id}
+                      onSelect={() => setSelectedId(item.id)}
+                    />
+                  ))}
                 </div>
-              ) : null,
-            )}
-          </div>
-
-          <ProjectPreview item={selectedItem} />
+              </div>
+            ) : null,
+          )}
         </div>
 
-        <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-2.5">
+        <div className="flex items-center justify-between border-t border-[rgba(115,185,255,0.2)] bg-white px-5 py-3">
           <Image
             src="/logo.png"
             alt=""
-            width={16}
-            height={16}
-            className="size-4 shrink-0 object-contain opacity-70"
+            width={18}
+            height={18}
+            className="size-[18px] shrink-0 object-contain opacity-80"
             aria-hidden
           />
-          {selectedItem?.detail ? (
+          {selectedItem?.href || selectedItem?.action ? (
             <button
               type="button"
               onClick={openSelected}
-              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-700 transition-colors hover:text-neutral-900"
-            >
-              Open project
-              <span className="inline-flex size-4 items-center justify-center rounded border border-neutral-300 bg-neutral-50 text-neutral-500">
-                <CornerDownLeft className="size-2.5" strokeWidth={2} />
-              </span>
-            </button>
-          ) : selectedItem?.href || selectedItem?.action ? (
-            <button
-              type="button"
-              onClick={openSelected}
-              className="inline-flex items-center gap-1.5 text-[12px] font-medium text-neutral-700 transition-colors hover:text-neutral-900"
+              className="inline-flex items-center gap-2 text-[13px] font-medium text-[#0078FF] transition-colors hover:text-[#0069E0]"
             >
               {selectedItem.external ? 'Open link' : 'Open'}
-              <span className="inline-flex size-4 items-center justify-center rounded border border-neutral-300 bg-neutral-50 text-neutral-500">
-                <CornerDownLeft className="size-2.5" strokeWidth={2} />
+              <span className="inline-flex size-[18px] items-center justify-center rounded border border-[rgba(115,185,255,0.45)] bg-[#f5f8ff] text-[#0078FF]">
+                <CornerDownLeft className="size-3" strokeWidth={2} />
               </span>
             </button>
           ) : null}
