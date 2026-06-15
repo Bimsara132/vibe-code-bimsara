@@ -2,6 +2,8 @@ import { createRequire } from 'module'
 
 const require = createRequire(import.meta.url)
 
+const isGithubPages = process.env.GITHUB_PAGES === 'true'
+
 function dedup(packageName) {
   try {
     const entry = require.resolve(packageName)
@@ -24,6 +26,13 @@ if (reactReduxDir) resolveAliases['react-redux'] = reactReduxDir
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(isGithubPages
+    ? {
+        output: 'export',
+        basePath: '/vibe-frontend',
+        trailingSlash: true,
+      }
+    : {}),
   reactStrictMode: false,
   typescript: {
     ignoreBuildErrors: true,
