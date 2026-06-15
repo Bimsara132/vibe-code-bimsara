@@ -10,6 +10,7 @@ export function TemplateCard({
   name,
   description,
   image,
+  previewClass,
   className,
 }: Template & { className?: string }) {
   return (
@@ -32,7 +33,12 @@ export function TemplateCard({
               unoptimized
             />
           ) : (
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl border border-black/[0.06] ibl-card-gradient">
+            <div
+              className={cn(
+                'absolute inset-0 flex items-center justify-center overflow-hidden rounded-xl border border-black/[0.06]',
+                previewClass ?? 'ibl-card-gradient',
+              )}
+            >
               <Image
                 src="/logo.png"
                 alt=""

@@ -12,6 +12,8 @@ type ProjectCardProps = {
   id?: string
   name: string
   edited: string
+  image?: string
+  previewClass?: string
   starred?: boolean
   onToggleStar?: () => void
   className?: string
@@ -21,6 +23,8 @@ export function ProjectCard({
   id,
   name,
   edited,
+  image,
+  previewClass,
   starred = false,
   onToggleStar,
   className,
@@ -30,16 +34,31 @@ export function ProjectCard({
   const thumbnail = (
     <div className="relative mb-3 flex flex-col">
       <div className="group/thumb relative aspect-video w-full overflow-hidden rounded-xl bg-muted">
-        <div className="absolute inset-0 flex items-center justify-center rounded-xl border border-black/[0.06] bg-white">
+        {image ? (
           <Image
-            src="/logo.png"
-            alt=""
-            width={32}
-            height={32}
-            className="size-8 shrink-0 object-contain opacity-40"
-            aria-hidden
+            alt={name}
+            src={image}
+            fill
+            className="rounded-xl border border-black/[0.06] object-cover object-top transition-opacity duration-150 group-hover/thumb:opacity-90"
+            unoptimized
           />
-        </div>
+        ) : (
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center rounded-xl border border-black/[0.06]',
+              previewClass ?? 'ibl-card-gradient',
+            )}
+          >
+            <Image
+              src="/logo.png"
+              alt=""
+              width={32}
+              height={32}
+              className="size-8 shrink-0 object-contain opacity-40"
+              aria-hidden
+            />
+          </div>
+        )}
         <button
           type="button"
           onClick={(event) => {

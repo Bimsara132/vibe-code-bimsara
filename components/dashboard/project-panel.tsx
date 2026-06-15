@@ -19,8 +19,10 @@ export function ProjectPanel() {
   const { projects, isProjectStarred, toggleStarProject } = useProjects()
   const [activeTab, setActiveTab] = useState<Tab>('My projects')
 
-  const editedLabel =
-    activeTab === 'Recently viewed' ? 'Viewed 2 days ago' : 'Edited 2 days ago'
+  const editedLabel = (project: (typeof projects)[number]) =>
+    activeTab === 'Recently viewed'
+      ? 'Viewed 2 days ago'
+      : (project.edited ?? 'Edited 2 days ago')
 
   return (
     <div className="flex w-full flex-col">
@@ -80,7 +82,9 @@ export function ProjectPanel() {
                     <ProjectCard
                       id={project.id}
                       name={project.name}
-                      edited={editedLabel}
+                      edited={editedLabel(project)}
+                      image={project.image}
+                      previewClass={project.previewClass}
                       starred={isProjectStarred(project.id)}
                       onToggleStar={() => toggleStarProject(project.id)}
                     />

@@ -115,7 +115,13 @@ function ProjectsGrid({
   isProjectStarred,
   toggleStarProject,
 }: {
-  projects: { id: string; name: string }[]
+  projects: {
+    id: string
+    name: string
+    image?: string
+    previewClass?: string
+    edited?: string
+  }[]
   view: ViewMode
   isProjectStarred: (id: string) => boolean
   toggleStarProject: (id: string) => void
@@ -136,7 +142,9 @@ function ProjectsGrid({
           key={project.id}
           id={project.id}
           name={project.name}
-          edited="Edited 3 days ago"
+          edited={project.edited ?? 'Edited 3 days ago'}
+          image={project.image}
+          previewClass={project.previewClass}
           starred={isProjectStarred(project.id)}
           onToggleStar={() => toggleStarProject(project.id)}
         />

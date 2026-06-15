@@ -2,15 +2,19 @@ export type Template = {
   name: string
   description: string
   image?: string
+  previewClass?: string
 }
 
-const cdn = (path: string) =>
+export const templatePreviewUrl = (path: string) =>
   `https://lovable.dev/cdn-cgi/image/width=640,f=auto,fit=scale-down/${path}`
+
+const cdn = templatePreviewUrl
 
 export const RESOURCE_TEMPLATES: Template[] = [
   {
     name: 'vibe.ibl.ai',
     description: 'Code-powered presentation builder',
+    previewClass: 'lovable-gradient',
   },
   {
     name: 'AssetWise',
@@ -51,5 +55,10 @@ export const RESOURCE_TEMPLATES: Template[] = [
     name: 'Inspo Canvas',
     description:
       'Spatial canvas for collecting, arranging, and sharing visual inspiration',
+    image: cdn('https://storage.googleapis.com/lovable-assets/templates/inspo.jpg'),
   },
 ]
+
+export function getTemplatePreview(templateName: string) {
+  return RESOURCE_TEMPLATES.find((template) => template.name === templateName)
+}
