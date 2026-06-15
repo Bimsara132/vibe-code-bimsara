@@ -93,10 +93,6 @@ export async function redirectToAuthSpa(
   logout?: boolean,
   saveRedirect?: boolean,
 ) {
-  if (isSsoRedirectSuppressed()) {
-    return
-  }
-
   const redirectOrigin = getRedirectOrigin()
   const path =
     redirectTo ??

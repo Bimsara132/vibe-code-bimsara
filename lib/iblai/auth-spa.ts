@@ -45,8 +45,13 @@ export function saveLoginRedirectPath(path?: string) {
   }
 }
 
+function authRedirectOrigin(): string {
+  if (typeof window === 'undefined') return ''
+  return `${window.location.origin}/sso-login-complete`
+}
+
 export function buildAuthSpaLoginUrl(options?: { email?: string; provider?: string }) {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const origin = authRedirectOrigin()
   const tenant = resolveAppTenant()
   const params = new URLSearchParams({
     app: 'custom',
@@ -56,6 +61,37 @@ export function buildAuthSpaLoginUrl(options?: { email?: string; provider?: stri
   if (options?.email) params.set('email', options.email)
   if (options?.provider) params.set('provider', options.provider)
   return `${config.authUrl()}/login?${params.toString()}`
+}
+
+/** Email magic-link flow — auth SPA reads `email` and sends the verification link. */
+export function startEmailLogin(email: string) {
+  saveLoginRedirectPath()
+  window.location.href = buildAuthSpaLoginUrl({ email: email.trim() })
+}
+
+/**
+ * Google SSO — auth SPA seeds redirect-to then opens Google OAuth via sso_login_url.
+ */
+export async function startGoogleLogin(): Promise<void> {
+  if (typeof window === 'undefined') return
+
+  saveLoginRedirectPath()
+
+  try {
+    const loginUrl = await fetchGoogleLoginUrl()
+    const providerUrl = buildSsoProviderUrl(loginUrl)
+    const params = new URLSearchParams({
+      app: 'custom',
+      'redirect-to': authRedirectOrigin(),
+      sso_login_url: providerUrl,
+    })
+    const tenant = resolveAppTenant()
+    if (tenant) params.set('tenant', tenant)
+    window.location.href = `${config.authUrl()}/login?${params.toString()}`
+  } catch (error) {
+    console.error('[auth] Google login failed, falling back to auth SPA:', error)
+    window.location.href = buildAuthSpaLoginUrl()
+  }
 }
 
 /** Strip the LMS default dashboard next target — auth SPA does the same before SSO. */
@@ -114,100 +150,6 @@ async function fetchGoogleLoginUrl(): Promise<string> {
   }
 
   return google.loginUrl
-}
-
-/** Minimal auth SPA URL — only seeds redirect-to on login.iblai.app (no visible UI). */
-function buildAuthSpaSeedUrl(): string {
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const params = new URLSearchParams({
-    app: 'custom',
-    'redirect-to': origin,
-  })
-  return `${config.authUrl()}/login?${params.toString()}`
-}
-
-/**
- * Write redirect-to into login.iblai.app localStorage without navigating the main window
- * through the auth SPA login screen.
- */
-function seedAuthSpaRedirectTarget(): Promise<void> {
-  if (typeof window === 'undefined') return Promise.resolve()
-
-  const seedUrl = buildAuthSpaSeedUrl()
-
-  return new Promise((resolve) => {
-    const finish = () => resolve()
-    const timeout = window.setTimeout(finish, 2500)
-
-    const popup = window.open(
-      seedUrl,
-      'ibl_auth_seed',
-      'width=1,height=1,left=-10000,top=-10000,noopener,noreferrer',
-    )
-
-    if (popup) {
-      window.setTimeout(() => {
-        popup.close()
-        window.clearTimeout(timeout)
-        finish()
-      }, 600)
-      return
-    }
-
-    const iframe = document.createElement('iframe')
-    iframe.setAttribute('aria-hidden', 'true')
-    iframe.style.cssText =
-      'position:absolute;width:0;height:0;border:0;visibility:hidden'
-    iframe.onload = () => {
-      window.setTimeout(() => {
-        iframe.remove()
-        window.clearTimeout(timeout)
-        finish()
-      }, 500)
-    }
-    document.body.appendChild(iframe)
-    iframe.src = seedUrl
-  })
-}
-
-async function navigateToExternalUrl(url: string): Promise<void> {
-  if (isTauri()) {
-    try {
-      const { invoke } = await import('@tauri-apps/api/core')
-      await invoke('open_external_url', { url })
-      return
-    } catch {
-      // fall through to full navigation
-    }
-  }
-  window.location.href = url
-}
-
-/** Email magic-link flow — auth SPA reads `email` and sends the verification link. */
-export function startEmailLogin(email: string) {
-  saveLoginRedirectPath()
-  window.location.href = buildAuthSpaLoginUrl({ email: email.trim() })
-}
-
-/**
- * Google SSO — open the LMS Google OAuth URL directly (no auth SPA login UI).
- * A hidden popup seeds redirect-to on login.iblai.app so the post-OAuth handoff
- * still returns to this app via /sso-login-complete.
- */
-export async function startGoogleLogin(): Promise<void> {
-  if (typeof window === 'undefined') return
-
-  saveLoginRedirectPath()
-
-  try {
-    const loginUrl = await fetchGoogleLoginUrl()
-    const providerUrl = buildSsoProviderUrl(loginUrl)
-    await seedAuthSpaRedirectTarget()
-    await navigateToExternalUrl(providerUrl)
-  } catch (error) {
-    console.error('[auth] Direct Google login failed, falling back to auth SPA:', error)
-    window.location.href = buildAuthSpaLoginUrl()
-  }
 }
 
 /** Full SDK redirect (clears storage, syncs cookies) when a hard handoff is required. */

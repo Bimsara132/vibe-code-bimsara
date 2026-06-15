@@ -12,20 +12,13 @@ import {
   syncAuthToCookies,
 } from '@iblai/iblai-js/web-utils'
 import { usePathname } from 'next/navigation'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { Provider as ReduxProvider } from 'react-redux'
 
 import { AppLoadingScreen } from '@/components/app-loading-screen'
 import {
-  clearSsoHandoffFlags,
-  clearSsoLoginUi,
-  COMPLETING_LOGIN_MESSAGE,
-  getSsoRedirectGraceRemainingMs,
   handleAuthHttp401,
   hasNonExpiredAuthToken,
-  isSsoHandoffActive,
-  isSsoLoginUiActive,
-  isSsoRedirectSuppressed,
   redirectToAuthSpa,
 } from '@/lib/iblai/auth-utils'
 import config from '@/lib/iblai/config'
@@ -40,56 +33,11 @@ const PUBLIC_ROUTES = new Map<RegExp, () => Promise<boolean>>([
   [new RegExp('^/login'), async () => false],
 ])
 
-function AuthLoadingFallback({ completingLogin }: { completingLogin?: boolean }) {
-  return (
-    <AppLoadingScreen
-      message={completingLogin ? COMPLETING_LOGIN_MESSAGE : undefined}
-    />
-  )
-}
-
-function CompletingLoginOverlay() {
-  return (
-    <div className="fixed inset-0 z-[9999] bg-white">
-      <AppLoadingScreen message={COMPLETING_LOGIN_MESSAGE} />
-    </div>
-  )
-}
-
 export function IblaiProviders({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [hasMounted, setHasMounted] = useState(false)
-  const [enableStorageSync, setEnableStorageSync] = useState(true)
-  const [ssoSessionReady, setSsoSessionReady] = useState(false)
-  const [graceTick, setGraceTick] = useState(0)
-  const [completingLoginVisible, setCompletingLoginVisible] = useState(false)
-
-  const dismissCompletingLogin = useCallback(() => {
-    clearSsoLoginUi()
-    setCompletingLoginVisible(false)
-  }, [])
-
-  useEffect(() => {
-    setHasMounted(true)
-    if (isSsoLoginUiActive()) {
-      setCompletingLoginVisible(true)
-    }
-  }, [])
-
-  useEffect(() => {
-    const remaining = getSsoRedirectGraceRemainingMs()
-    if (remaining <= 0) return
-
-    const timer = window.setTimeout(() => {
-      setGraceTick((value) => value + 1)
-    }, remaining + 50)
-
-    return () => window.clearTimeout(timer)
-  }, [isInitialized, graceTick])
-
-  useEffect(() => {
+  const [isInitialized] = useState(() => {
+    if (typeof window === 'undefined') return false
     try {
       initializeDataLayer(
         config.dmUrl(),
@@ -103,57 +51,11 @@ export function IblaiProviders({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('[ibl.ai] initializeDataLayer failed:', error)
     }
-
-    const finishingSsoHandoff = isSsoHandoffActive()
-
-    if (finishingSsoHandoff) {
-      setEnableStorageSync(false)
-
-      void (async () => {
-        try {
-          // Push SSO localStorage into cookies before cross-SPA sync starts.
-          await syncAuthToCookies(storageService)
-          await syncAuthToCookies(storageService)
-        } finally {
-          clearSsoHandoffFlags()
-          setSsoSessionReady(true)
-          setEnableStorageSync(true)
-        }
-      })()
-    } else {
-      setSsoSessionReady(true)
-    }
-
-    setIsInitialized(true)
-  }, [])
-
-  const isSsoRoute = pathname?.startsWith('/sso-login') ?? false
-
-  const blockAuthRedirects = hasMounted
-    ? isSsoRedirectSuppressed() ||
-      isSsoHandoffActive() ||
-      (!ssoSessionReady && hasNonExpiredAuthToken())
-    : false
-
-  const allowStorageSync =
-    hasMounted &&
-    enableStorageSync &&
-    !isSsoRoute &&
-    !isSsoRedirectSuppressed()
-
-  useEffect(() => {
-    if (!completingLoginVisible || !ssoSessionReady) return
-
-    if (blockAuthRedirects) {
-      const timer = window.setTimeout(() => {
-        dismissCompletingLogin()
-      }, 600)
-      return () => window.clearTimeout(timer)
-    }
-  }, [blockAuthRedirects, completingLoginVisible, dismissCompletingLogin, ssoSessionReady])
+    return true
+  })
 
   const username = useMemo(() => {
-    if (!isInitialized) return ''
+    if (!isInitialized || typeof window === 'undefined') return ''
     try {
       const raw = localStorage.getItem('userData')
       if (raw) return JSON.parse(raw).user_nicename ?? ''
@@ -168,10 +70,13 @@ export function IblaiProviders({ children }: { children: ReactNode }) {
     return resolveAppTenant()
   }, [isInitialized, pathname])
 
+  const isSsoRoute = pathname?.startsWith('/sso-login') ?? false
+
   const saveCurrentTenant = useCallback((t: unknown) => {
     if (typeof t === 'string') {
       localStorage.setItem('current_tenant', JSON.stringify({ key: t }))
       localStorage.setItem('tenant', t)
+      localStorage.setItem('app_tenant', t)
     } else {
       const tenant = t as {
         key: string
@@ -181,67 +86,53 @@ export function IblaiProviders({ children }: { children: ReactNode }) {
       }
       localStorage.setItem('current_tenant', JSON.stringify(tenant))
       localStorage.setItem('tenant', tenant.key)
+      localStorage.setItem('app_tenant', tenant.key)
     }
     void syncAuthToCookies(storageService)
     checkTenantMismatch()
   }, [])
 
-  const handleTenantSwitch = useCallback(
-    async (tenant: string, saveRedirect?: boolean) => {
-      localStorage.setItem('current_tenant', JSON.stringify({ key: tenant }))
-      localStorage.setItem('tenant', tenant)
-      if (saveRedirect && typeof window !== 'undefined') {
-        localStorage.setItem('redirectTo', window.location.pathname)
-      }
-      await syncAuthToCookies(storageService)
-      window.location.reload()
-    },
-    [],
-  )
+  const handleTenantSwitch = useCallback(async () => {
+    const tenant = resolveAppTenant()
+    redirectToAuthSpa(undefined, tenant, false, true)
+  }, [])
 
-  if (!hasMounted || !isInitialized) {
+  if (!isInitialized) {
     return <AppLoadingScreen />
   }
 
   return (
-    <>
-      <ReduxProvider store={iblaiStore}>
-        <ServiceWorkerProvider>
-          <AuthProvider
+    <ReduxProvider store={iblaiStore}>
+      <ServiceWorkerProvider>
+        <AuthProvider
+          skip={isSsoRoute}
+          redirectToAuthSpa={redirectToAuthSpa}
+          hasNonExpiredAuthToken={hasNonExpiredAuthToken}
+          username={username}
+          pathname={pathname ?? '/'}
+          storageService={storageService}
+          middleware={PUBLIC_ROUTES}
+          enableStorageSync
+          fallback={<AppLoadingScreen />}
+        >
+          <TenantProvider
             skip={isSsoRoute}
-            skipAuthCheck={blockAuthRedirects}
-            redirectToAuthSpa={redirectToAuthSpa}
-            hasNonExpiredAuthToken={hasNonExpiredAuthToken}
-            username={username}
-            pathname={pathname ?? '/'}
-            storageService={storageService}
-            middleware={PUBLIC_ROUTES}
-            enableStorageSync={allowStorageSync}
-            onAuthSuccess={dismissCompletingLogin}
-            fallback={
-              <AuthLoadingFallback completingLogin={completingLoginVisible} />
+            skipCustomDomainCheck
+            currentTenant={tenantKey}
+            requestedTenant={tenantKey}
+            saveCurrentTenant={saveCurrentTenant}
+            saveUserTenants={(t: unknown) =>
+              localStorage.setItem('tenants', JSON.stringify(t))
             }
+            handleTenantSwitch={handleTenantSwitch}
+            redirectToAuthSpa={redirectToAuthSpa}
+            username={username}
+            fallback={<AppLoadingScreen />}
           >
-            <TenantProvider
-              skip={isSsoRoute}
-              skipCustomDomainCheck
-              currentTenant={tenantKey}
-              requestedTenant={tenantKey}
-              saveCurrentTenant={saveCurrentTenant}
-              saveUserTenants={(t: unknown) =>
-                localStorage.setItem('tenants', JSON.stringify(t))
-              }
-              handleTenantSwitch={handleTenantSwitch}
-              redirectToAuthSpa={redirectToAuthSpa}
-              username={username}
-              fallback={null}
-            >
-              {children}
-            </TenantProvider>
-          </AuthProvider>
-        </ServiceWorkerProvider>
-      </ReduxProvider>
-      {completingLoginVisible ? <CompletingLoginOverlay /> : null}
-    </>
+            {children}
+          </TenantProvider>
+        </AuthProvider>
+      </ServiceWorkerProvider>
+    </ReduxProvider>
   )
 }
