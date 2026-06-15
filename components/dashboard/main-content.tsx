@@ -4,8 +4,13 @@ import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { VibeBuildChat } from '@/components/iblai/vibe-build-chat'
+import { HomeSdkVoiceHost } from '@/components/iblai/home-sdk-voice-host'
 import { useOnyxUI } from '@/components/onyx-shell-context'
 import { readPendingBuild, savePendingBuild } from '@/lib/iblai/pending-build'
+import {
+  triggerSdkVoiceCallWithRetry,
+  triggerSdkVoiceInputWithRetry,
+} from '@/lib/iblai/trigger-sdk-voice'
 import { useIblaiUser } from '@/lib/iblai/use-iblai-user'
 
 import { HomePromptBlock } from './home-prompt-block'
@@ -21,6 +26,8 @@ export function MainContent() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const rafRef = useRef(0)
   const [scrollY, setScrollY] = useState(0)
+  const [homeVoiceMode, setHomeVoiceMode] = useState<'call' | 'record' | null>(null)
+  const homeVoiceReadyRef = useRef(false)
   const titleCurveGradientId = useId()
   const { displayName } = useIblaiUser()
   const firstName = displayName.split(/\s+/)[0] ?? ''
@@ -48,7 +55,26 @@ export function MainContent() {
     [router],
   )
 
+  const handleVoiceCall = useCallback(() => {
+    if (homeVoiceReadyRef.current && homeVoiceMode) {
+      triggerSdkVoiceCallWithRetry()
+      return
+    }
+    setHomeVoiceMode('call')
+  }, [homeVoiceMode])
+
+  const handleVoiceInput = useCallback(() => {
+    if (homeVoiceReadyRef.current && homeVoiceMode) {
+      triggerSdkVoiceInputWithRetry()
+      return
+    }
+    setHomeVoiceMode('record')
+  }, [homeVoiceMode])
+
   useEffect(() => {
+    if (homeChatResetSeq === 0) return
+    homeVoiceReadyRef.current = false
+    setHomeVoiceMode(null)
     router.replace('/app')
   }, [homeChatResetSeq, router])
 
@@ -127,7 +153,11 @@ export function MainContent() {
             </div>
 
             <div className="w-full max-w-[820px] shrink-0">
-              <HomePromptBlock onSend={handleSendMessage} />
+              <HomePromptBlock
+                onSend={handleSendMessage}
+                onVoiceCall={handleVoiceCall}
+                onVoiceInput={handleVoiceInput}
+              />
             </div>
           </div>
 
@@ -143,6 +173,16 @@ export function MainContent() {
           </div>
         </div>
       </div>
+
+      {homeVoiceMode ? (
+        <HomeSdkVoiceHost
+          key={homeVoiceMode}
+          mode={homeVoiceMode}
+          onHostReady={() => {
+            homeVoiceReadyRef.current = true
+          }}
+        />
+      ) : null}
     </main>
   )
 }

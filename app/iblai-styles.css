@@ -4,3 +4,38 @@
 
 @import '@iblai/iblai-js/web-containers/styles';
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source";
+
+/**
+ * Custom chat layout — host message list + ChatPromptFooter.
+ * SDK Chat stays mounted (invisible) for session, streaming, and voice hooks.
+ */
+
+/* Always hide SDK native prompt — host renders ChatPromptFooter */
+#vibe-custom-chat div.flex-shrink-0:has(#chat-input-textarea) {
+  display: none !important;
+}
+
+/* Keep SDK forms in DOM (off-screen) for programmatic send + voice hooks */
+#vibe-custom-chat form:has(#chat-input-textarea) {
+  position: fixed;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#vibe-custom-chat div.overflow-y-auto:has(#chat-input-textarea)
+  .mb-8.flex.flex-col.items-center {
+  display: none;
+}
+
+#vibe-custom-chat div.overflow-y-auto:has(#chat-input-textarea) .mb-12 {
+  display: none;
+}
+
+/* Hide duplicate SDK message thread — host renders ChatMessageList */
+#vibe-custom-chat div.min-h-0.flex-1.overflow-y-auto {
+  display: none;
+}

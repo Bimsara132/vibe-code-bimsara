@@ -1,9 +1,25 @@
 'use client'
 
-import { chatInputSliceActions } from '@iblai/iblai-js/web-utils'
+import {
+  chatInputSliceActions,
+  eventBus,
+  RemoteEvents,
+  selectNumberOfActiveChatMessages,
+} from '@iblai/iblai-js/web-utils'
 import type { Dispatch } from '@reduxjs/toolkit'
 
-const CHAT_ROOT = '#main-content'
+import { iblaiStore } from '@/store/iblai-store'
+
+const CHAT_ROOT = '#vibe-custom-chat'
+
+function didSendStart(messageCountBefore: number) {
+  const state = iblaiStore.getState()
+  return selectNumberOfActiveChatMessages(state) > messageCountBefore
+}
+
+export function isSdkChatInputMounted() {
+  return Boolean(findChatTextarea())
+}
 
 function findChatTextarea() {
   return document.querySelector(
@@ -17,9 +33,7 @@ function findChatSubmitButton() {
   ) as HTMLButtonElement | null
 }
 
-export function submitSdkChatMessage(dispatch: Dispatch, message: string): boolean {
-  dispatch(chatInputSliceActions.setTextareaInput(message))
-
+function submitViaDom(message: string) {
   const textarea = findChatTextarea()
   if (textarea) {
     textarea.value = message
@@ -42,6 +56,41 @@ export function submitSdkChatMessage(dispatch: Dispatch, message: string): boole
   return false
 }
 
+function trySubmit(
+  dispatch: Dispatch,
+  message: string,
+  messageCountBefore: number,
+  emitEvent: boolean,
+) {
+  if (didSendStart(messageCountBefore)) {
+    return true
+  }
+
+  dispatch(chatInputSliceActions.setTextareaInput(message))
+
+  if (emitEvent) {
+    eventBus.emit(RemoteEvents.sendChatMessage, {
+      content: message,
+      visible: true,
+    })
+  }
+
+  if (didSendStart(messageCountBefore)) {
+    return true
+  }
+
+  submitViaDom(message)
+  return didSendStart(messageCountBefore)
+}
+
+export function submitSdkChatMessage(dispatch: Dispatch, message: string): boolean {
+  const trimmed = message.trim()
+  if (!trimmed) return false
+
+  const messageCountBefore = selectNumberOfActiveChatMessages(iblaiStore.getState())
+  return trySubmit(dispatch, trimmed, messageCountBefore, true)
+}
+
 export function submitSdkChatMessageWithRetry(
   dispatch: Dispatch,
   message: string,
@@ -51,7 +100,26 @@ export function submitSdkChatMessageWithRetry(
     onSuccess?: () => void
   },
 ) {
-  if (submitSdkChatMessage(dispatch, message)) {
+  const trimmed = message.trim()
+  if (!trimmed) return () => {}
+
+  const messageCountBefore = selectNumberOfActiveChatMessages(iblaiStore.getState())
+  let eventEmitted = false
+
+  const attempt = () => {
+    if (didSendStart(messageCountBefore)) {
+      return true
+    }
+
+    const shouldEmit = !eventEmitted
+    if (shouldEmit) {
+      eventEmitted = true
+    }
+
+    return trySubmit(dispatch, trimmed, messageCountBefore, shouldEmit)
+  }
+
+  if (attempt()) {
     options?.onSuccess?.()
     return () => {}
   }
@@ -60,7 +128,7 @@ export function submitSdkChatMessageWithRetry(
   const timeoutMs = options?.timeoutMs ?? 30000
 
   const interval = window.setInterval(() => {
-    if (submitSdkChatMessage(dispatch, message)) {
+    if (attempt()) {
       options?.onSuccess?.()
       window.clearInterval(interval)
       window.clearTimeout(timeout)

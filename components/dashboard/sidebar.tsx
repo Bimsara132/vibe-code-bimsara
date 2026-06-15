@@ -1368,7 +1368,9 @@ function SidebarContentImpl({
             <SidebarNavDivider />
 
             <p className={SIDEBAR_SECTION_LABEL_CLASS}>Recents</p>
-            {recentChats.length === 0 && !recentChatsLoading ? (
+            {recentChatsLoading ? (
+              <p className="px-2 py-1 text-[13px] text-[#9ca3af]">Loading…</p>
+            ) : recentChats.length === 0 ? (
               <p className="px-2 py-1 text-[13px] text-[#9ca3af]">No recent chats</p>
             ) : (
               recentChats.map((chat) => (

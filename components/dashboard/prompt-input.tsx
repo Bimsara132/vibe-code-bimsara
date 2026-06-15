@@ -3,8 +3,9 @@
 import type React from 'react'
 import { useRef, useState } from 'react'
 
-import { Archive, FileText, Plus, X } from 'lucide-react'
+import { FileText, Plus, X } from 'lucide-react'
 
+import { MemoryPopover } from '@/components/chat-input/memory-popover'
 import { VoiceControls } from '@/components/chat-input/voice-controls'
 import { CanvasIcon } from '@/components/icons/canvas-icon'
 import { Button } from '@/components/ui/button'
@@ -24,16 +25,24 @@ type PromptInputProps = {
   value?: string
   onValueChange?: (value: string) => void
   onSubmit?: (message: string, options?: { useCanvas?: boolean }) => void
+  onVoiceCall?: () => void
+  onVoiceInput?: () => void
   placeholder?: string
   defaultCanvasSelected?: boolean
+  mentorId?: string
+  tenantKey?: string
 }
 
 export function PromptInput({
   value,
   onValueChange,
   onSubmit,
+  onVoiceCall,
+  onVoiceInput,
   placeholder = 'Ask anything...',
   defaultCanvasSelected = false,
+  mentorId,
+  tenantKey = '',
 }: PromptInputProps = {}) {
   const [internalValue, setInternalValue] = useState('')
   const isControlled = value !== undefined && onValueChange !== undefined
@@ -165,44 +174,19 @@ export function PromptInput({
                 )}
               </Button>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={chipButtonClass(selectedToolType === 'Memory')}
-                onClick={(e) => {
-                  e.preventDefault()
-                  setSelectedToolType((prev) =>
-                    prev === 'Memory' ? '' : 'Memory',
-                  )
-                }}
-              >
-                <Archive
-                  className={cn(
-                    'size-3.5 md:size-4',
-                    selectedToolType === 'Memory'
-                      ? 'text-ibl'
-                      : 'text-gray-600',
-                  )}
-                />
-                Memory
-                {selectedToolType === 'Memory' && (
-                  <X
-                    className="ml-0.5 size-2.5 cursor-pointer md:ml-1 md:size-3"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      setSelectedToolType('')
-                    }}
-                  />
-                )}
-              </Button>
+              <MemoryPopover
+                mentorId={mentorId}
+                tenantKey={tenantKey}
+                chipButtonClass={chipButtonClass}
+              />
             </div>
 
             <VoiceControls
               isRecording={isRecording}
-              onVoiceInput={() => setIsRecording((prev) => !prev)}
-              onPhoneCallClick={() => setIsRecording(true)}
+              onVoiceInput={
+                onVoiceInput ?? (() => setIsRecording((prev) => !prev))
+              }
+              onPhoneCallClick={onVoiceCall ?? (() => setIsRecording(true))}
             />
           </div>
         </div>

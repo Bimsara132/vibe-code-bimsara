@@ -1,58 +1,69 @@
 'use client'
 
-import { useGetChatHistoryQuery } from '@iblai/iblai-js/data-layer'
-import { useUsername } from '@iblai/iblai-js/web-utils'
+import { useEffect, useMemo, useState } from 'react'
+import { useCachedSessionId } from '@iblai/iblai-js/web-utils'
 
-import { resolveAppTenant } from '@/lib/iblai/tenant'
+import {
+  listLocalRecentChatItems,
+  mergeRecentChatSources,
+  RECENT_CHATS_UPDATED_EVENT,
+} from '@/lib/iblai/local-recent-chats'
+import {
+  buildRecentChatHref,
+  type RecentChatItem,
+} from '@/lib/iblai/recent-chat-utils'
+import { useDefaultMentorId } from '@/lib/iblai/use-default-mentor'
 
 const RECENT_CHAT_LIMIT = 8
 
-export type RecentChatItem = {
-  id: string
-  label: string
-  mentorId: string
-  href: string
-}
-
-export function buildRecentChatHref(sessionId: string, mentorId?: string) {
-  const params = new URLSearchParams({ session: sessionId })
-  if (mentorId) params.set('mentor', mentorId)
-  return `/app?${params.toString()}`
-}
-
-function formatRecentChatLabel(messages: string | undefined) {
-  const trimmed = messages?.trim()
-  if (!trimmed) return 'Untitled chat'
-  if (trimmed.length <= 52) return trimmed
-  return `${trimmed.slice(0, 52)}…`
-}
+export type { RecentChatItem } from '@/lib/iblai/recent-chat-utils'
+export { buildRecentChatHref } from '@/lib/iblai/recent-chat-utils'
 
 export function useRecentChats() {
-  const tenantKey = resolveAppTenant()
-  const username = useUsername() ?? ''
+  const { mentorId, isLoading: isMentorLoading } = useDefaultMentorId()
+  const [cachedSessionId] = useCachedSessionId()
+  const [localVersion, setLocalVersion] = useState(0)
 
-  const { data, isLoading, isFetching } = useGetChatHistoryQuery(
-    {
-      org: tenantKey,
-      // @ts-expect-error userId is required by the API but omitted from generated types
-      userId: username,
-      filterUserId: username,
-      page: 1,
-      pageSize: RECENT_CHAT_LIMIT,
-    },
-    { skip: !tenantKey || !username },
-  )
+  useEffect(() => {
+    const onUpdate = () => setLocalVersion((version) => version + 1)
+    window.addEventListener(RECENT_CHATS_UPDATED_EVENT, onUpdate)
+    return () => window.removeEventListener(RECENT_CHATS_UPDATED_EVENT, onUpdate)
+  }, [])
 
-  const items: RecentChatItem[] =
-    data?.results?.map((conversation) => ({
-      id: conversation.id,
-      label: formatRecentChatLabel(conversation.messages),
-      mentorId: conversation.mentor,
-      href: buildRecentChatHref(conversation.id, conversation.mentor),
-    })) ?? []
+  const items = useMemo(() => {
+    const localItems = listLocalRecentChatItems(RECENT_CHAT_LIMIT)
+
+    const cachedItems = Object.entries(cachedSessionId ?? {})
+      .filter(([, sessionId]) => Boolean(sessionId))
+      .map(([cachedMentorId, sessionId]) => ({
+        id: sessionId,
+        label: 'Untitled chat',
+        mentorId: cachedMentorId,
+        href: buildRecentChatHref(sessionId, cachedMentorId),
+        updatedAt: 0,
+      }))
+
+    const preferredMentorItems =
+      mentorId && cachedSessionId?.[mentorId]
+        ? [
+            {
+              id: cachedSessionId[mentorId],
+              label: 'Untitled chat',
+              mentorId,
+              href: buildRecentChatHref(cachedSessionId[mentorId], mentorId),
+              updatedAt: Date.now(),
+            },
+          ]
+        : []
+
+    return mergeRecentChatSources(
+      [...localItems, ...preferredMentorItems, ...cachedItems],
+      RECENT_CHAT_LIMIT,
+    )
+  }, [cachedSessionId, localVersion, mentorId])
 
   return {
     items,
-    isLoading: isLoading || isFetching,
+    isLoading: isMentorLoading,
   }
 }

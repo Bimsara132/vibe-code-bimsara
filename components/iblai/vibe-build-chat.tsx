@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Chat, type ChatConfig } from '@iblai/iblai-js/web-containers/next'
 import {
+  chatActions,
   selectArtifactsEnabled,
   selectSessionId,
   TOOLS,
@@ -19,11 +20,18 @@ import {
 } from '@iblai/iblai-js/web-utils'
 
 import { AppLoadingScreen } from '@/components/app-loading-screen'
+import { ChatMessageList } from '@/components/dashboard/chat-message-list'
+import { ChatPromptFooter } from '@/components/dashboard/chat-prompt-footer'
+import { VoiceBootstrap } from '@/components/iblai/voice-bootstrap'
 import { redirectToAuthSpa } from '@/lib/iblai/auth-utils'
 import { buildPromptWithCanvas } from '@/lib/iblai/build-canvas-prompt'
+import { upsertLocalRecentChat } from '@/lib/iblai/local-recent-chats'
 import { clearPendingBuild } from '@/lib/iblai/pending-build'
 import config from '@/lib/iblai/config'
-import { submitSdkChatMessageWithRetry } from '@/lib/iblai/submit-sdk-chat'
+import {
+  isSdkChatInputMounted,
+  submitSdkChatMessageWithRetry,
+} from '@/lib/iblai/submit-sdk-chat'
 import { useDefaultMentorId } from '@/lib/iblai/use-default-mentor'
 import { resolveAppTenant } from '@/lib/iblai/tenant'
 
@@ -52,8 +60,12 @@ function CanvasBuildBootstrap({
 }) {
   const dispatch = useDispatch()
   const submittedRef = useRef(false)
-  const canvasRequestedRef = useRef(false)
+  const canvasEnabledForSessionRef = useRef<string | null>(null)
+  const updateSessionToolsRef = useRef<
+    ReturnType<typeof useMentorTools>['updateSessionTools']
+  >(() => Promise.resolve())
   const sessionId = useSelector(selectSessionId)
+  const [sessionSettled, setSessionSettled] = useState(false)
   const artifactsEnabled = useSelector(selectArtifactsEnabled)
   const { updateSessionTools } = useMentorTools({
     tenantKey,
@@ -61,32 +73,77 @@ function CanvasBuildBootstrap({
     username,
   })
 
+  updateSessionToolsRef.current = updateSessionTools
+
   useEffect(() => {
-    if (!useCanvas || !sessionId || artifactsEnabled || canvasRequestedRef.current) {
+    if (!sessionId) {
+      setSessionSettled(false)
+      canvasEnabledForSessionRef.current = null
       return
     }
 
-    canvasRequestedRef.current = true
-    void updateSessionTools(TOOLS.CANVAS)
-  }, [artifactsEnabled, mentorId, sessionId, updateSessionTools, useCanvas])
+    const timer = window.setTimeout(() => setSessionSettled(true), 900)
+    return () => window.clearTimeout(timer)
+  }, [sessionId])
+
+  useEffect(() => {
+    if (!useCanvas || !sessionId || artifactsEnabled) return
+    if (canvasEnabledForSessionRef.current === sessionId) return
+
+    canvasEnabledForSessionRef.current = sessionId
+    void updateSessionToolsRef.current(TOOLS.CANVAS)
+  }, [artifactsEnabled, sessionId, useCanvas])
 
   useEffect(() => {
     const prompt = buildPromptWithCanvas(initialPrompt, useCanvas)
-    if (skipInitialSubmit || !prompt || submittedRef.current || !sessionId) return
+    if (
+      skipInitialSubmit ||
+      !prompt ||
+      submittedRef.current ||
+      !sessionId ||
+      !sessionSettled ||
+      (useCanvas && !artifactsEnabled)
+    ) {
+      return
+    }
 
-    const cleanup = submitSdkChatMessageWithRetry(dispatch, prompt, {
-      onSuccess: () => {
-        submittedRef.current = true
-        if (buildNonce) clearPendingBuild(buildNonce)
-      },
-    })
+    let cleanupSubmit: (() => void) | undefined
 
-    return cleanup
+    const startSubmit = () => {
+      if (submittedRef.current || !isSdkChatInputMounted()) return false
+
+      cleanupSubmit = submitSdkChatMessageWithRetry(dispatch, prompt, {
+        intervalMs: 300,
+        timeoutMs: 60000,
+        onSuccess: () => {
+          submittedRef.current = true
+          if (buildNonce) clearPendingBuild(buildNonce)
+        },
+      })
+      return true
+    }
+
+    if (startSubmit()) {
+      return () => cleanupSubmit?.()
+    }
+
+    const waitForInput = window.setInterval(() => {
+      if (startSubmit()) {
+        window.clearInterval(waitForInput)
+      }
+    }, 200)
+
+    return () => {
+      window.clearInterval(waitForInput)
+      cleanupSubmit?.()
+    }
   }, [
+    artifactsEnabled,
     buildNonce,
     dispatch,
     initialPrompt,
     sessionId,
+    sessionSettled,
     skipInitialSubmit,
     useCanvas,
   ])
@@ -104,6 +161,8 @@ function VibeBuildChatInner({
   const restoreSessionId = searchParams.get('session') ?? undefined
   const restoreMentorId = searchParams.get('mentor') ?? undefined
   const newParam = searchParams.get('new') ?? undefined
+  const startVoiceCall = searchParams.get('voice') === 'call'
+  const startVoiceRecord = searchParams.get('voice') === 'record'
 
   const { mentorId: defaultMentorId, isLoading: isMentorLoading } =
     useDefaultMentorId()
@@ -120,6 +179,35 @@ function VibeBuildChatInner({
   const { userTenants } = useUserTenants()
   const { visitingTenant } = useVisitingTenant()
   const isAdmin = useIsAdmin()
+  const dispatch = useDispatch()
+  const sessionId = useSelector(selectSessionId)
+
+  useLayoutEffect(() => {
+    if (!newParam || !mentorId) return
+
+    dispatch(chatActions.setStatus('idle'))
+    dispatch(chatActions.setStreaming(false))
+    dispatch(chatActions.resetIsTyping(undefined))
+    dispatch(chatActions.resetCurrentStreamingMessage(undefined))
+  }, [dispatch, mentorId, newParam])
+
+  useEffect(() => {
+    if (!mentorId) return
+
+    if (restoreSessionId) {
+      upsertLocalRecentChat({
+        id: restoreSessionId,
+        label: initialPrompt.trim() || 'Untitled chat',
+        mentorId,
+      })
+      return
+    }
+
+    const label = initialPrompt.trim()
+    if (!sessionId || !label) return
+
+    upsertLocalRecentChat({ id: sessionId, label, mentorId })
+  }, [initialPrompt, mentorId, restoreSessionId, sessionId])
 
   useEffect(() => {
     setTenantKey(resolveAppTenant())
@@ -194,23 +282,38 @@ function VibeBuildChatInner({
       tabIndex={-1}
       className="flex h-full min-h-0 flex-1 flex-col overflow-hidden py-0 md:py-[10px]"
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-none md:rounded-[10px]">
-        <Chat
-          key={`${mentorId}:${restoreSessionId ?? ''}:${newParam ?? ''}:${initialPrompt ? 'build' : ''}`}
-          isPreviewMode={false}
-          hasBorder={false}
-          mentorId={mentorId}
-          tenantKey={tenantKey}
-          config={chatConfig}
-          redirectToAuthSpa={(redirectTo, platformKey, logout) => {
-            void redirectToAuthSpa(redirectTo, platformKey, logout)
-          }}
-          username={username || null}
-          userTenants={userTenants ?? []}
-          visitingTenant={visitingTenant}
-          axdToken={axdToken ?? ''}
-          userIsStudent={!isAdmin}
-        />
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none md:rounded-[10px]">
+        <div
+          id="vibe-custom-chat"
+          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+          aria-hidden
+        >
+          <Chat
+            key={`${mentorId}:${restoreSessionId ?? ''}:${newParam ?? ''}:${initialPrompt ? 'build' : ''}`}
+            isPreviewMode={false}
+            hasBorder={false}
+            mentorId={mentorId}
+            tenantKey={tenantKey}
+            config={chatConfig}
+            redirectToAuthSpa={(redirectTo, platformKey, logout) => {
+              void redirectToAuthSpa(redirectTo, platformKey, logout)
+            }}
+            username={username || null}
+            userTenants={userTenants ?? []}
+            visitingTenant={visitingTenant}
+            axdToken={axdToken ?? ''}
+            userIsStudent={!isAdmin}
+          />
+        </div>
+
+        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col px-4 md:px-8">
+          <ChatMessageList
+            initialPrompt={initialPrompt}
+            isRestoringSession={Boolean(restoreSessionId)}
+          />
+          <ChatPromptFooter mentorId={mentorId} tenantKey={tenantKey} />
+        </div>
+
         <CanvasBuildBootstrap
           mentorId={mentorId}
           tenantKey={tenantKey}
@@ -219,6 +322,10 @@ function VibeBuildChatInner({
           useCanvas={useCanvas}
           buildNonce={buildNonce}
           skipInitialSubmit={skipInitialSubmit}
+        />
+        <VoiceBootstrap
+          startVoiceCall={startVoiceCall}
+          startVoiceRecord={startVoiceRecord}
         />
       </div>
     </main>
