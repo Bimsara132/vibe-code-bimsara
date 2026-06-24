@@ -7,9 +7,12 @@ import { ProfileDialog } from '@/components/iblai/profile-dialog'
 import { useOnyxUI } from '@/components/onyx-shell-context'
 import { cn } from '@/lib/utils'
 
+import { parseProjectIdFromPath } from '@/lib/iblai/project-route'
+
 import { ConnectorsPanel } from './connectors-panel'
 import { MainContent } from './main-content'
 import { MobileHeader } from './mobile-header'
+import { ProjectDetailPage } from './project-detail-page'
 import { ProjectsPage } from './projects-page'
 import { ResourcesPage } from './resources-page'
 import { SearchChatsDialog } from './search-chats-dialog'
@@ -18,6 +21,14 @@ import { DashboardSidebar } from './sidebar'
 function DashboardPage({ path }: { path: string }) {
   if (path.startsWith('/app/resources')) {
     return <ResourcesPage />
+  }
+
+  if (parseProjectIdFromPath(path)) {
+    return (
+      <Suspense fallback={null}>
+        <ProjectDetailPage />
+      </Suspense>
+    )
   }
 
   if (path.startsWith('/app/projects')) {

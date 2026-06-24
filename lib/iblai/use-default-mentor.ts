@@ -16,7 +16,7 @@ export function useDefaultMentorId() {
   const configuredId = config.defaultAgentId()
   const tenantKey = resolveAppTenant()
   const username = useUsername() ?? ''
-  const skipDiscovery = Boolean(configuredId) || !tenantKey
+  const skipDiscovery = !tenantKey
 
   const {
     data: featuredMentors,
@@ -69,7 +69,8 @@ export function useDefaultMentorId() {
 
   const publicMentorId = pickMentorId(publicMentors?.results)
 
-  const mentorId = configuredId || featuredId || userMentorId || publicMentorId
+  // Prefer API-discovered mentors — env default may not exist for this user/tenant.
+  const mentorId = featuredId || userMentorId || publicMentorId || configuredId
 
   const isLoading =
     !mentorId &&

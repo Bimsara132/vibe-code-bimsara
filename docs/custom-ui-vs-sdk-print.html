@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>vibe.ibl.ai — Custom UI vs SDK</title>
+  <style>
+    @page { margin: 18mm 16mm; size: A4; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      color: #1a1a1a;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    h1 { font-size: 22pt; margin: 0 0 4px; color: #111; }
+    h2 {
+      font-size: 13pt;
+      margin: 22px 0 10px;
+      padding-bottom: 4px;
+      border-bottom: 2px solid #7284FF;
+      color: #111;
+      page-break-after: avoid;
+    }
+    h3 { font-size: 11pt; margin: 14px 0 8px; color: #333; page-break-after: avoid; }
+    .subtitle { color: #555; font-size: 10pt; margin-bottom: 18px; }
+    .summary-box {
+      background: #f4f6ff;
+      border: 1px solid #c7d2fe;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .summary-box p { margin: 0 0 8px; }
+    .summary-box p:last-child { margin: 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 16px;
+      font-size: 9.5pt;
+      page-break-inside: avoid;
+    }
+    th {
+      background: #7284FF;
+      color: #fff;
+      text-align: left;
+      padding: 8px 10px;
+      font-weight: 600;
+    }
+    td {
+      border: 1px solid #e5e7eb;
+      padding: 7px 10px;
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #fafafa; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 8.5pt;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-yes { background: #dcfce7; color: #166534; }
+    .badge-partial { background: #fef9c3; color: #854d0e; }
+    .badge-no { background: #fee2e2; color: #991b1b; }
+    .badge-custom { background: #e0e7ff; color: #3730a3; }
+    .badge-need { background: #ffedd5; color: #9a3412; }
+    ul { margin: 6px 0 12px 18px; padding: 0; }
+    li { margin-bottom: 4px; }
+    .legend { font-size: 9pt; color: #555; margin-bottom: 12px; }
+    .legend span { margin-right: 14px; }
+    .page-break { page-break-before: always; }
+    .footer-note { font-size: 8.5pt; color: #888; margin-top: 24px; border-top: 1px solid #eee; padding-top: 8px; }
+  </style>
+</head>
+<body>
+
+  <h1>vibe.ibl.ai — Custom UI vs SDK</h1>
+  <p class="subtitle">What we built vs what the ibl.ai SDK provides · June 2026</p>
+
+  <div class="summary-box">
+    <p><strong>In one sentence:</strong> We built a Lovable-style app shell (sidebar, home, projects, resources). The SDK powers chat, auth, projects API, and profile — but many shell features are still custom or mock.</p>
+    <p><strong>SDK packages:</strong> @iblai/iblai-js 1.18 · web-containers 1.9 · data-layer 1.8 · web-utils 1.10</p>
+  </div>
+
+  <div class="legend">
+    <span><span class="badge badge-yes">SDK wired</span> Working today</span>
+    <span><span class="badge badge-partial">Partial</span> Mix of custom + SDK</span>
+    <span><span class="badge badge-no">Mock</span> Fake / static data</span>
+    <span><span class="badge badge-need">Need SDK</span> Should use SDK next</span>
+  </div>
+
+  <h2>1. Every screen — who builds what?</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:14%">Screen</th>
+        <th style="width:12%">URL</th>
+        <th style="width:28%">Custom UI (our app)</th>
+        <th style="width:28%">SDK provides</th>
+        <th style="width:18%">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Home</strong></td>
+        <td>/app</td>
+        <td>Welcome hero, background, prompt box, starter suggestions, project cards</td>
+        <td>Mentor discovery, memory API in prompt</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+      </tr>
+      <tr>
+        <td><strong>Chat</strong></td>
+        <td>/app?session=…</td>
+        <td>Custom prompt footer, canvas toggle, branding CSS</td>
+        <td><strong>Chat</strong> — messages, canvas, voice, WebSocket</td>
+        <td><span class="badge badge-yes">SDK wired</span></td>
+      </tr>
+      <tr>
+        <td><strong>Projects list</strong></td>
+        <td>/app/projects</td>
+        <td>Grid/list views, filters, cards, Create button</td>
+        <td>Projects API — list, create, rename, delete</td>
+        <td><span class="badge badge-yes">SDK wired</span></td>
+      </tr>
+      <tr>
+        <td><strong>Project chat</strong></td>
+        <td>/app/projects/:id</td>
+        <td>Route wrapper only</td>
+        <td><strong>Chat</strong> + projectId → landing, files, instructions, agents</td>
+        <td><span class="badge badge-yes">SDK wired</span></td>
+      </tr>
+      <tr>
+        <td><strong>Resources</strong></td>
+        <td>/app/resources</td>
+        <td>Template gallery (static images)</td>
+        <td>Nothing — no template API used</td>
+        <td><span class="badge badge-no">Mock</span></td>
+      </tr>
+      <tr>
+        <td><strong>Connectors</strong></td>
+        <td>Sidebar overlay</td>
+        <td>Marketing panel, fake connector list</td>
+        <td>ConnectorManagementDialog, McpTab (not used)</td>
+        <td><span class="badge badge-no">Mock</span></td>
+      </tr>
+      <tr>
+        <td><strong>Sidebar</strong></td>
+        <td>Always visible</td>
+        <td>Nav, recents, projects links, notifications, profile menu</td>
+        <td>AppSidebar, NotificationDropdown (not used)</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+      </tr>
+      <tr>
+        <td><strong>Profile</strong></td>
+        <td>/app/profile</td>
+        <td>Dialog wrapper</td>
+        <td><strong>UserProfileModal</strong></td>
+        <td><span class="badge badge-yes">SDK wired</span></td>
+      </tr>
+      <tr>
+        <td><strong>Login</strong></td>
+        <td>/login</td>
+        <td>Custom login page design</td>
+        <td>Auth providers, SSO redirect</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+      </tr>
+      <tr>
+        <td><strong>Admin</strong></td>
+        <td>/app/admin</td>
+        <td>30+ menu items in sidebar</td>
+        <td>Agent admin tabs exist in SDK</td>
+        <td><span class="badge badge-no">Mock</span> (no pages)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>2. What we NEED from the SDK (not wired yet)</h2>
+  <p>These SDK features exist but our app still uses custom or fake UI instead.</p>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%">SDK feature</th>
+        <th style="width:28%">What it does</th>
+        <th style="width:28%">What we do today</th>
+        <th style="width:12%">Priority</th>
+        <th style="width:10%">Skill</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>AppSidebar</strong></td>
+        <td>Projects dropdown, pinned chats, recent messages</td>
+        <td>Custom 1,470-line sidebar + localStorage recents</td>
+        <td><span class="badge badge-need">P0</span></td>
+        <td>agent-chat-sidebar</td>
+      </tr>
+      <tr>
+        <td><strong>Chat history API</strong></td>
+        <td>Server-backed conversation list</td>
+        <td>localStorage only — breaks on new device</td>
+        <td><span class="badge badge-need">P0</span></td>
+        <td>agent-history</td>
+      </tr>
+      <tr>
+        <td><strong>UserProfileDropdown</strong></td>
+        <td>Profile menu + tenant switcher</td>
+        <td>Custom dropdown + demo notifications</td>
+        <td><span class="badge badge-need">P0</span></td>
+        <td>profile</td>
+      </tr>
+      <tr>
+        <td><strong>File upload (files reducer)</strong></td>
+        <td>Attach files to chat messages</td>
+        <td>Drop zone shows toast only — no upload</td>
+        <td><span class="badge badge-need">P0</span></td>
+        <td>agent-chat</td>
+      </tr>
+      <tr>
+        <td><strong>NotificationDropdown</strong></td>
+        <td>Real notification bell + center</td>
+        <td>Hardcoded fake notifications</td>
+        <td><span class="badge badge-need">P1</span></td>
+        <td>notification</td>
+      </tr>
+      <tr>
+        <td><strong>ConnectorManagementDialog</strong></td>
+        <td>Real MCP / connector setup</td>
+        <td>Static mock connectors panel</td>
+        <td><span class="badge badge-need">P1</span></td>
+        <td>component</td>
+      </tr>
+      <tr>
+        <td><strong>ConversationStarters</strong></td>
+        <td>SDK welcome prompts per agent</td>
+        <td>Static PromptSuggestions on home</td>
+        <td><span class="badge badge-need">P1</span></td>
+        <td>agent-chat</td>
+      </tr>
+      <tr>
+        <td><strong>AgentSearch</strong></td>
+        <td>Browse / pick agents</td>
+        <td>Single default agent from env</td>
+        <td><span class="badge badge-need">P2</span></td>
+        <td>agent-search</td>
+      </tr>
+      <tr>
+        <td><strong>Account page</strong></td>
+        <td>Org settings, billing</td>
+        <td>Profile modal only</td>
+        <td><span class="badge badge-need">P2</span></td>
+        <td>account</td>
+      </tr>
+      <tr>
+        <td><strong>Agent admin tabs</strong></td>
+        <td>LLM, MCP, datasets, safety, etc.</td>
+        <td>Admin nav with no routes</td>
+        <td><span class="badge badge-need">P2</span></td>
+        <td>agent-* skills</td>
+      </tr>
+      <tr>
+        <td><strong>CreditBalance</strong></td>
+        <td>Usage / credits widget</td>
+        <td>Not shown</td>
+        <td><span class="badge badge-need">P3</span></td>
+        <td>credit</td>
+      </tr>
+      <tr>
+        <td><strong>AnalyticsLayout</strong></td>
+        <td>Usage dashboards</td>
+        <td>Not shown</td>
+        <td><span class="badge badge-need">P3</span></td>
+        <td>analytics</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="page-break"></div>
+
+  <h2>3. What the SDK already gives us (wired today)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30%">SDK piece</th>
+        <th style="width:35%">Used for</th>
+        <th style="width:35%">File in our app</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Chat</strong> component</td>
+        <td>Messages, streaming, canvas split, voice, project landing</td>
+        <td>components/iblai/vibe-build-chat.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>AuthProvider + TenantProvider</strong></td>
+        <td>Login session, tenant, tokens</td>
+        <td>providers/iblai-providers.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>useGetUserProjectsQuery</strong></td>
+        <td>List projects on /app/projects</td>
+        <td>components/projects-context.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>useCreate/Update/DeleteUserProject</strong></td>
+        <td>Create project → open project chat</td>
+        <td>components/projects-context.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>useGetUserProjectDetailsQuery</strong></td>
+        <td>Load agents assigned to a project</td>
+        <td>components/iblai/vibe-build-chat.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>useGetMentorsQuery</strong></td>
+        <td>Pick default agent for chat</td>
+        <td>lib/iblai/use-default-mentor.ts</td>
+      </tr>
+      <tr>
+        <td><strong>UserProfileModal</strong></td>
+        <td>Profile settings dialog</td>
+        <td>components/iblai/profile-dialog.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>Memory APIs</strong></td>
+        <td>Memory popover in prompt box</td>
+        <td>components/chat-input/memory-popover.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>useMentorTools (Canvas)</strong></td>
+        <td>Enable canvas tool per session</td>
+        <td>components/iblai/vibe-build-chat.tsx</td>
+      </tr>
+      <tr>
+        <td><strong>Redux chat slices</strong></td>
+        <td>Session ID, streaming state, message count</td>
+        <td>store/iblai-store.ts</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. What stays CUSTOM (SDK does not provide this)</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28%">Feature</th>
+        <th style="width:42%">Why it stays custom</th>
+        <th style="width:30%">Keep or replace?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Lovable-style home hero</td>
+        <td>Branded landing — not in SDK</td>
+        <td><span class="badge badge-custom">Keep custom</span></td>
+      </tr>
+      <tr>
+        <td>Custom prompt footer design</td>
+        <td>Our look &amp; feel; SDK input hidden via CSS</td>
+        <td><span class="badge badge-custom">Keep custom</span></td>
+      </tr>
+      <tr>
+        <td>Resources / templates gallery</td>
+        <td>Marketing page — no SDK equivalent</td>
+        <td><span class="badge badge-custom">Keep or remove mock</span></td>
+      </tr>
+      <tr>
+        <td>Connectors marketing overlay</td>
+        <td>Product marketing — replace with SDK dialog when ready</td>
+        <td><span class="badge badge-need">Replace later</span></td>
+      </tr>
+      <tr>
+        <td>Projects grid/list/compact views</td>
+        <td>SDK has project list in AppSidebar, not this layout</td>
+        <td><span class="badge badge-custom">Keep custom UI</span></td>
+      </tr>
+      <tr>
+        <td>Pending-build URL flow (?new=)</td>
+        <td>App-specific: home → auto-send first message</td>
+        <td><span class="badge badge-custom">Keep custom</span></td>
+      </tr>
+      <tr>
+        <td>Canvas split CSS overrides</td>
+        <td>SDK layout tweaks for our shell</td>
+        <td><span class="badge badge-custom">Keep custom</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>5. Real vs mock — quick checklist</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:50%">Feature</th>
+        <th style="width:25%">Real data?</th>
+        <th style="width:25%">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Login / SSO</td><td><span class="badge badge-yes">Yes</span></td><td>SDK auth</td></tr>
+      <tr><td>Chat messages</td><td><span class="badge badge-yes">Yes</span></td><td>SDK Chat + WebSocket</td></tr>
+      <tr><td>Canvas / voice</td><td><span class="badge badge-yes">Yes</span></td><td>SDK Chat</td></tr>
+      <tr><td>Projects list &amp; create</td><td><span class="badge badge-yes">Yes</span></td><td>data-layer API</td></tr>
+      <tr><td>Project chat (files, instructions)</td><td><span class="badge badge-yes">Yes</span></td><td>SDK ProjectLandingPage</td></tr>
+      <tr><td>Profile settings</td><td><span class="badge badge-yes">Yes</span></td><td>SDK UserProfileModal</td></tr>
+      <tr><td>Memory in prompt</td><td><span class="badge badge-yes">Yes</span></td><td>data-layer API</td></tr>
+      <tr><td>Sidebar recent chats</td><td><span class="badge badge-partial">Local only</span></td><td>localStorage</td></tr>
+      <tr><td>Starred projects</td><td><span class="badge badge-partial">Local only</span></td><td>localStorage</td></tr>
+      <tr><td>Home prompt suggestions</td><td><span class="badge badge-no">No</span></td><td>Static array</td></tr>
+      <tr><td>Resources templates</td><td><span class="badge badge-no">No</span></td><td>Static CDN images</td></tr>
+      <tr><td>Connectors panel</td><td><span class="badge badge-no">No</span></td><td>Hardcoded list</td></tr>
+      <tr><td>Notifications in sidebar</td><td><span class="badge badge-no">No</span></td><td>Demo data</td></tr>
+      <tr><td>Admin console pages</td><td><span class="badge badge-no">No</span></td><td>Nav only, no routes</td></tr>
+      <tr><td>File attach on prompt</td><td><span class="badge badge-no">No</span></td><td>Toast only</td></tr>
+    </tbody>
+  </table>
+
+  <h2>6. Recommended next steps</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">#</th>
+        <th style="width:35%">Action</th>
+        <th style="width:32%">SDK piece to add</th>
+        <th style="width:25%">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Replace localStorage recents with server history</td><td>Chat history API / AppSidebar</td><td>Medium</td></tr>
+      <tr><td>2</td><td>Swap custom profile menu for SDK dropdown</td><td>UserProfileDropdown (already built)</td><td>Low</td></tr>
+      <tr><td>3</td><td>Wire project card rename/delete menu</td><td>Existing mutations</td><td>Low</td></tr>
+      <tr><td>4</td><td>Connect file drop to real upload</td><td>files reducer + SDK upload</td><td>Medium</td></tr>
+      <tr><td>5</td><td>Replace mock connectors with real management</td><td>ConnectorManagementDialog</td><td>Medium</td></tr>
+      <tr><td>6</td><td>Add real notifications</td><td>NotificationDropdown</td><td>Low</td></tr>
+      <tr><td>7</td><td>Add admin routes or remove dead nav</td><td>Agent admin tabs</td><td>High</td></tr>
+    </tbody>
+  </table>
+
+  <p class="footer-note">
+    Generated for vibe.ibl.ai · Custom UI vs ibl.ai SDK gap analysis ·
+    Source: docs/custom-ui-vs-sdk.md · ibl.ai skills in .agents/skills/
+  </p>
+
+</body>
+</html>

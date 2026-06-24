@@ -6,17 +6,45 @@
 @source "../node_modules/@iblai/iblai-js/dist/web-containers/source";
 
 /**
- * Custom chat layout — host message list + ChatPromptFooter.
- * SDK Chat stays mounted (invisible) for session, streaming, and voice hooks.
+ * Custom chat layout — SDK message thread + host ChatPromptFooter.
+ * SDK Chat is visible in normal mode; host hides SDK welcome + native input.
  */
 
-/* Always hide SDK native prompt — host renders ChatPromptFooter */
-#vibe-custom-chat div.flex-shrink-0:has(#chat-input-textarea) {
+/* Normal mode: SDK fills the message column above the host footer */
+.vibe-build-chat:not(.canvas-split-active) #vibe-custom-chat {
+  position: relative !important;
+  inset: auto !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  overflow: hidden !important;
+}
+
+.vibe-build-chat:not(.canvas-split-active) #vibe-custom-chat .chat-main-content-area {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Normal mode: hide SDK native prompt — host renders ChatPromptFooter */
+.vibe-build-chat:not(.canvas-split-active):not(.project-mode)
+  #vibe-custom-chat
+  div.flex-shrink-0:has(#chat-input-textarea) {
   display: none !important;
 }
 
-/* Keep SDK forms in DOM (off-screen) for programmatic send + voice hooks */
-#vibe-custom-chat form:has(#chat-input-textarea) {
+/* Keep SDK form in DOM (off-screen) for programmatic send + voice hooks */
+.vibe-build-chat:not(.canvas-split-active):not(.project-mode)
+  #vibe-custom-chat
+  form:has(#chat-input-textarea) {
   position: fixed;
   left: -10000px;
   width: 1px;
@@ -26,16 +54,114 @@
   pointer-events: none;
 }
 
-#vibe-custom-chat div.overflow-y-auto:has(#chat-input-textarea)
-  .mb-8.flex.flex-col.items-center {
-  display: none;
+/* Normal mode: hide SDK welcome once the thread has messages or on new-build chats */
+.vibe-build-chat:not(.canvas-split-active):not(.project-mode).hide-sdk-welcome
+  #vibe-custom-chat
+  .chat-main-content-area
+  > div.overflow-y-auto:not(:has(.min-h-0.flex-1.overflow-y-auto))
+  .mb-8.flex.flex-col.items-center,
+.vibe-build-chat:not(.canvas-split-active):not(.project-mode).hide-sdk-welcome
+  #vibe-custom-chat
+  .chat-main-content-area
+  > div.overflow-y-auto:not(:has(.min-h-0.flex-1.overflow-y-auto))
+  .mb-12,
+.vibe-build-chat:not(.canvas-split-active):not(.project-mode).hide-sdk-welcome
+  #vibe-custom-chat
+  .chat-main-content-area
+  > div.h-full.flex-1
+  .mb-8.flex.flex-col.items-center,
+.vibe-build-chat:not(.canvas-split-active):not(.project-mode).hide-sdk-welcome
+  #vibe-custom-chat
+  .chat-main-content-area
+  > div.h-full.flex-1
+  .mb-12 {
+  display: none !important;
 }
 
-#vibe-custom-chat div.overflow-y-auto:has(#chat-input-textarea) .mb-12 {
-  display: none;
+/* Project mode: SDK project landing fills the message column */
+.vibe-build-chat.project-mode:not(.canvas-split-active) #vibe-custom-chat,
+.vibe-build-chat.project-mode:not(.canvas-split-active)
+  #vibe-custom-chat
+  .chat-main-content-area {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
 }
 
-/* Hide duplicate SDK message thread — host renders ChatMessageList */
-#vibe-custom-chat div.min-h-0.flex-1.overflow-y-auto {
-  display: none;
+/* Canvas split: full-size SDK chat + preview */
+.vibe-build-chat.canvas-split-active #vibe-custom-chat {
+  position: relative !important;
+  inset: auto !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  z-index: 20 !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.vibe-build-chat.canvas-split-active #vibe-custom-chat .chat-main-content-area {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+}
+
+.vibe-build-chat.canvas-split-active
+  #vibe-custom-chat
+  .chat-main-content-area
+  > .relative.flex.flex-1.overflow-hidden {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+/* SDK hides the left chat column with hidden md:flex — force it visible in split */
+.vibe-build-chat.canvas-split-active
+  #vibe-custom-chat
+  .chat-main-content-area
+  > .relative.flex.flex-1.overflow-hidden
+  > .hidden.md\:flex {
+  display: flex !important;
+}
+
+/**
+ * SDK LiveKit voice call dialog — keep controls clear of notch / home indicator.
+ * The SDK renders a full-viewport shell (h-[100vh]) inside Radix DialogContent.
+ */
+[data-iblai-dialog-interaction-layer]:has(> div.h-\[100vh\]) {
+  top: env(safe-area-inset-top, 0px) !important;
+  right: 0 !important;
+  bottom: env(safe-area-inset-bottom, 0px) !important;
+  left: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  max-height: none !important;
+  transform: none !important;
+  translate: none !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+[data-iblai-dialog-interaction-layer]:has(> div.h-\[100vh\]) > div.h-\[100vh\] {
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+[data-iblai-dialog-interaction-layer]:has(> div.h-\[100vh\]) > button.absolute {
+  top: max(1rem, env(safe-area-inset-top, 0px)) !important;
+  right: max(1rem, env(safe-area-inset-right, 0px)) !important;
+}
+
+[data-iblai-dialog-interaction-layer]:has(> div.h-\[100vh\])
+  > div.h-\[100vh\]
+  > div:last-child {
+  margin-bottom: 0 !important;
+  padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px)) !important;
 }

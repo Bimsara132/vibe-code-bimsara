@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 
 import { Chat, type ChatConfig } from '@iblai/iblai-js/web-containers/next'
 import {
-  useAxdToken,
   useCachedSessionId,
   useIsAdmin,
   useUserTenants,
@@ -18,6 +17,8 @@ import { redirectToAuthSpa } from '@/lib/iblai/auth-utils'
 import config from '@/lib/iblai/config'
 import { resolveAppTenant } from '@/lib/iblai/tenant'
 import { useDefaultMentorId } from '@/lib/iblai/use-default-mentor'
+import { useAuthTokensReady } from '@/lib/iblai/use-auth-tokens-ready'
+import { useResolvedAxdToken } from '@/lib/iblai/use-resolved-axd-token'
 
 type HomeSdkVoiceHostProps = {
   mode: 'call' | 'record'
@@ -32,7 +33,8 @@ export function HomeSdkVoiceHost({ mode, onHostReady }: HomeSdkVoiceHostProps) {
   const [seeded, setSeeded] = useState(false)
 
   const username = useUsername() ?? ''
-  const axdToken = useAxdToken()
+  const axdToken = useResolvedAxdToken()
+  const tokensReady = useAuthTokensReady()
   const { userTenants } = useUserTenants()
   const { visitingTenant } = useVisitingTenant()
   const isAdmin = useIsAdmin()
@@ -57,11 +59,12 @@ export function HomeSdkVoiceHost({ mode, onHostReady }: HomeSdkVoiceHostProps) {
   }, [mentorId])
 
   useEffect(() => {
-    if (!mentorId || !tenantKey || !seeded || isMentorLoading) return
+    if (!mentorId || !tenantKey || !seeded || isMentorLoading || !tokensReady || !axdToken)
+      return
     onHostReady?.()
-  }, [isMentorLoading, mentorId, onHostReady, seeded, tenantKey])
+  }, [axdToken, isMentorLoading, mentorId, onHostReady, seeded, tenantKey, tokensReady])
 
-  if (!mentorId || !tenantKey || !seeded || isMentorLoading) {
+  if (!mentorId || !tenantKey || !seeded || isMentorLoading || !tokensReady || !axdToken) {
     return null
   }
 
@@ -71,8 +74,8 @@ export function HomeSdkVoiceHost({ mode, onHostReady }: HomeSdkVoiceHostProps) {
     authUrl: () => config.authUrl(),
     mainTenantKey: config.mainTenantKey(),
     navigateToAdminBilling: () => router.push('/app/profile'),
-    navigateToExplore: () => router.push('/app'),
-    navigateToMentor: () => router.push('/app'),
+    navigateToExplore: () => {},
+    navigateToMentor: () => {},
   }
 
   return (

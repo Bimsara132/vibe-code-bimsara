@@ -203,10 +203,7 @@ export function VibeLoginPage() {
         <div className="vibe-login__main">
           <div className="vibe-login__hero">
             <h1 className="vibe-login__title">{LOGIN_BRAND.title}</h1>
-            <p className="vibe-login__tagline">
-              <span className="vibe-login__tagline-lead">{LOGIN_BRAND.taglineLead} </span>
-              <span className="vibe-login__tagline-rest">{LOGIN_BRAND.taglineRest}</span>
-            </p>
+            <p className="vibe-login__tagline">{LOGIN_BRAND.subtitle}</p>
           </div>
 
           <div className="vibe-login__card">

@@ -8,11 +8,15 @@ import {
   Search,
   Users,
 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useUsername } from '@iblai/iblai-js/web-utils'
 import { useSearchParams } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
+import { AppLoadingScreen } from '@/components/app-loading-screen'
 import { useProjects } from '@/components/projects-context'
 import { Button } from '@/components/ui/button'
+import { buildProjectHref } from '@/lib/iblai/project-route'
 import { cn } from '@/lib/utils'
 
 import { ProjectCard } from './project-card'
@@ -167,6 +171,7 @@ function getPageTitle(filter: ProjectFilter) {
 }
 
 export function ProjectsPage() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const filterParam = searchParams.get('filter')
   const filter: ProjectFilter =
@@ -176,10 +181,18 @@ export function ProjectsPage() {
       ? filterParam
       : null
 
-  const { projects, starredProjectIds, sharedProjectIds, toggleStarProject, isProjectStarred } =
+  const { projects, starredProjectIds, toggleStarProject, isProjectStarred, isLoading, isCreating, isError, createProject } =
     useProjects()
+  const username = useUsername() ?? ''
   const [query, setQuery] = useState('')
   const [view, setView] = useState<ViewMode>('grid')
+
+  const handleCreateProject = useCallback(async () => {
+    const project = await createProject()
+    if (project) {
+      router.push(buildProjectHref(project.id))
+    }
+  }, [createProject, router])
 
   const starredProjects = useMemo(
     () => projects.filter((project) => starredProjectIds.includes(project.id)),
@@ -187,8 +200,18 @@ export function ProjectsPage() {
   )
 
   const sharedProjects = useMemo(
-    () => projects.filter((project) => sharedProjectIds.includes(project.id)),
-    [projects, sharedProjectIds],
+    () => projects.filter((project) => project.shared),
+    [projects],
+  )
+
+  const ownedProjects = useMemo(
+    () =>
+      projects.filter(
+        (project) =>
+          !project.shared ||
+          (username && project.ownerUsername?.toLowerCase() === username.toLowerCase()),
+      ),
+    [projects, username],
   )
 
   const filteredProjects = useMemo(() => {
@@ -199,11 +222,13 @@ export function ProjectsPage() {
       list = starredProjects
     } else if (filter === 'shared') {
       list = sharedProjects
+    } else if (filter === 'created') {
+      list = ownedProjects
     }
 
     if (!q) return list
     return list.filter((project) => project.name.toLowerCase().includes(q))
-  }, [filter, projects, query, sharedProjects, starredProjects])
+  }, [filter, ownedProjects, projects, query, sharedProjects, starredProjects])
 
   const pageTitle = getPageTitle(filter)
   const showCreateButton = filter === null
@@ -216,6 +241,10 @@ export function ProjectsPage() {
 
   const showSharedEmptyState =
     filter === 'shared' && sharedProjects.length === 0 && !query.trim()
+
+  if (isLoading) {
+    return <AppLoadingScreen message="Loading projects…" />
+  }
 
   if (showStarredEmptyState) {
     return (
@@ -265,10 +294,13 @@ export function ProjectsPage() {
           </h1>
           {showCreateButton ? (
             <Button
+              type="button"
               variant="outline"
+              disabled={isCreating}
+              onClick={() => void handleCreateProject()}
               className="h-9 gap-1 rounded-lg border-neutral-200 bg-white px-3 text-[14px] font-normal text-ibl-neutral shadow-none hover:bg-neutral-50"
             >
-              Create
+              {isCreating ? 'Creating…' : 'Create'}
               <ChevronDown className="size-4 text-neutral-500" strokeWidth={2} />
             </Button>
           ) : null}
@@ -283,7 +315,9 @@ export function ProjectsPage() {
           filterOptions={filterOptions}
         />
 
-        <p className="mb-4 text-[13px] text-[#9ca3af]">Active in last 14 days</p>
+        <p className="mb-4 text-[13px] text-[#9ca3af]">
+          {isError ? 'Could not load projects' : 'Active in last 14 days'}
+        </p>
 
         {filteredProjects.length > 0 ? (
           <ProjectsGrid

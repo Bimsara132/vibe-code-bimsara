@@ -4,18 +4,26 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 import {
-  selectActiveTab,
-  selectChats,
+  selectActiveChatMessages,
+  selectCurrentStreamingArtifact,
   selectCurrentStreamingMessage,
   selectIsError,
   selectIsPending,
   selectIsTyping,
   selectStreaming,
+  selectStreamingArtifactContentBuffer,
 } from '@iblai/iblai-js/web-utils'
 
 import { buildChatThread, splitStreamingThread } from '@/lib/iblai/chat-thread'
 import { displayChatContent } from '@/lib/iblai/display-chat-content'
 import { cn } from '@/lib/utils'
+
+type ChatMessageLike = {
+  id: string
+  role: string
+  content: string
+  artifactVersions?: Array<{ title?: string; is_current?: boolean }>
+}
 
 function formatChatTimestamp(date: Date) {
   return date.toLocaleString(undefined, {
@@ -33,22 +41,47 @@ function scrollToBottom(element: HTMLDivElement | null) {
   })
 }
 
-function ThinkingBubble() {
+function ThinkingBubble({ detail }: { detail?: string }) {
   return (
     <div className="w-full max-w-full rounded-lg border border-ibl-soft-border bg-ibl-soft px-4 py-3 text-sm md:text-base">
       <p className="font-medium text-ibl">Working...</p>
       <p className="mt-1 text-ibl-muted">
-        Designing your project — this may take a moment.
+        {detail ?? 'Designing your project — this may take a moment.'}
       </p>
     </div>
   )
 }
 
-function hasAssistantReply(messages: Array<{ role: string; content: string }>) {
+function CanvasArtifactCard({ title }: { title: string }) {
+  return (
+    <div className="w-full max-w-full rounded-lg border border-ibl-soft-border bg-ibl-soft px-4 py-3 text-sm text-ibl-neutral md:text-base">
+      <p className="font-medium text-ibl">{title}</p>
+      <p className="mt-1 text-ibl-muted">
+        Your prototype is building in Canvas — it will open automatically when ready.
+      </p>
+    </div>
+  )
+}
+
+function getArtifactTitle(message: ChatMessageLike) {
+  const versions = message.artifactVersions
+  if (!versions?.length) return null
+
+  const current = versions.find((version) => version.is_current) ?? versions[0]
+  const title = current?.title?.trim()
+  return title || 'Canvas prototype'
+}
+
+function messageHasArtifact(message: ChatMessageLike) {
+  return Boolean(message.artifactVersions?.length)
+}
+
+function hasAssistantReply(messages: ChatMessageLike[]) {
   return messages.some(
     (message) =>
       message.role === 'assistant' &&
-      displayChatContent(message.content).trim().length > 0,
+      (displayChatContent(message.content).trim().length > 0 ||
+        messageHasArtifact(message)),
   )
 }
 
@@ -65,17 +98,18 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const startedAtRef = useRef(new Date())
+  const restoringStartedAtRef = useRef<number | null>(null)
+  const [restoreTimedOut, setRestoreTimedOut] = useState(false)
 
-  const activeTab = useSelector(selectActiveTab)
-  const chats = useSelector(selectChats)
+  const messages = useSelector(selectActiveChatMessages)
   const isStreaming = useSelector(selectStreaming)
   const isPending = useSelector(selectIsPending)
   const isTyping = useSelector(selectIsTyping)
   const isError = useSelector(selectIsError)
   const streamingMessage = useSelector(selectCurrentStreamingMessage)
+  const streamingArtifact = useSelector(selectCurrentStreamingArtifact)
+  const streamingArtifactBuffer = useSelector(selectStreamingArtifactContentBuffer)
   const [pendingTimedOut, setPendingTimedOut] = useState(false)
-
-  const messages = chats[activeTab] ?? []
 
   const thread = useMemo(() => buildChatThread(messages), [messages])
 
@@ -90,8 +124,13 @@ export function ChatMessageList({
   const showPendingUser = Boolean(pendingPrompt) && !hasUserMessage
 
   const isGenerating = isPending || isStreaming || isTyping
+  const artifactStreamTitle =
+    streamingArtifact?.title?.trim() ||
+    (streamingArtifactBuffer?.trim() ? 'Canvas prototype' : '')
+
   const awaitingAssistant =
     !liveStream &&
+    !artifactStreamTitle &&
     !hasAssistantReply(threadForRender) &&
     (hasUserMessage || (showPendingUser && isGenerating))
 
@@ -99,10 +138,12 @@ export function ChatMessageList({
   const lastRole = lastMessage?.role
   const lastIsEmptyAssistant =
     lastMessage?.role === 'assistant' &&
-    !displayChatContent(lastMessage.content).trim()
+    !displayChatContent(lastMessage.content).trim() &&
+    !messageHasArtifact(lastMessage)
 
   const showThinking =
     !liveStream &&
+    !artifactStreamTitle &&
     !isError &&
     !pendingTimedOut &&
     awaitingAssistant &&
@@ -123,19 +164,58 @@ export function ChatMessageList({
     threadForRender.length === 0 &&
     !showPendingUser &&
     !liveStream &&
-    !isPending &&
-    !isStreaming
+    !artifactStreamTitle &&
+    !isGenerating &&
+    !restoreTimedOut
+
+  useEffect(() => {
+    if (!isRestoringSession) {
+      restoringStartedAtRef.current = null
+      setRestoreTimedOut(false)
+      return
+    }
+
+    if (threadForRender.length > 0 || showPendingUser || liveStream || artifactStreamTitle) {
+      setRestoreTimedOut(false)
+      return
+    }
+
+    if (!restoringStartedAtRef.current) {
+      restoringStartedAtRef.current = Date.now()
+    }
+
+    const timer = window.setTimeout(() => {
+      setRestoreTimedOut(true)
+    }, 10000)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    artifactStreamTitle,
+    isRestoringSession,
+    liveStream,
+    showPendingUser,
+    threadForRender.length,
+  ])
 
   useEffect(() => {
     scrollToBottom(scrollRef.current)
-  }, [threadForRender, liveStream, showThinking, showPendingUser, showLoading])
+  }, [
+    threadForRender,
+    liveStream,
+    artifactStreamTitle,
+    showThinking,
+    showPendingUser,
+    showLoading,
+  ])
 
   const hasContent =
     threadForRender.length > 0 ||
     showThinking ||
     showPendingUser ||
     Boolean(liveStream) ||
+    Boolean(artifactStreamTitle) ||
     showLoading ||
+    restoreTimedOut ||
     isError ||
     pendingTimedOut
 
@@ -143,7 +223,7 @@ export function ChatMessageList({
     <div
       ref={scrollRef}
       className={cn(
-        'min-h-0 flex-1 overflow-y-auto overflow-x-hidden',
+        'min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-white',
         className,
       )}
     >
@@ -157,6 +237,13 @@ export function ChatMessageList({
         {showLoading ? (
           <div className="flex justify-center py-8">
             <div className="size-8 animate-spin rounded-full border-2 border-ibl-soft-border border-t-ibl" />
+          </div>
+        ) : null}
+
+        {restoreTimedOut ? (
+          <div className="w-full max-w-full rounded-lg border border-neutral-200 bg-white px-4 py-3 text-sm text-ibl-neutral md:text-base">
+            This chat is taking longer than expected to load. Try refreshing the
+            page or starting a new chat.
           </div>
         ) : null}
 
@@ -180,8 +267,18 @@ export function ChatMessageList({
           }
 
           const assistantContent = displayChatContent(message.content)
+          const artifactTitle = getArtifactTitle(message)
+
+          if (!assistantContent.trim() && artifactTitle) {
+            return <CanvasArtifactCard key={message.id} title={artifactTitle} />
+          }
+
           if (!assistantContent.trim() && isGenerating) {
             return <ThinkingBubble key={message.id} />
+          }
+
+          if (!assistantContent.trim()) {
+            return null
           }
 
           return (
@@ -198,6 +295,12 @@ export function ChatMessageList({
           <div className="w-full max-w-full rounded-lg border border-ibl-soft-border bg-ibl-soft px-4 py-3 text-sm text-ibl-neutral md:text-base">
             <p className="whitespace-pre-wrap break-words">{liveStream}</p>
           </div>
+        ) : null}
+
+        {artifactStreamTitle && !liveStream ? (
+          <ThinkingBubble
+            detail={`Building ${artifactStreamTitle} in Canvas — hang tight while the preview generates.`}
+          />
         ) : null}
 
         {showThinking && !lastIsEmptyAssistant ? <ThinkingBubble /> : null}

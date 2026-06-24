@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils'
 
 import { ProjectCard } from './project-card'
 import { TemplateCard } from './template-card'
-import { RESOURCE_TEMPLATES } from './templates-data'
+import { useStartVibeTemplate } from './use-start-vibe-template'
+import { VIBE_TEMPLATES } from '@/lib/iblai/vibe-templates'
 
 const tabs = ['My projects', 'Recently viewed', 'Vibe templates'] as const
 
@@ -17,6 +18,7 @@ type Tab = (typeof tabs)[number]
 
 export function ProjectPanel() {
   const { projects, isProjectStarred, toggleStarProject } = useProjects()
+  const { startTemplate, startingTemplateId, isStarting } = useStartVibeTemplate()
   const [activeTab, setActiveTab] = useState<Tab>('My projects')
 
   const editedLabel = (project: (typeof projects)[number]) =>
@@ -65,11 +67,14 @@ export function ProjectPanel() {
       >
         {activeTab === 'Vibe templates' ? (
           <div className="grid w-full grid-cols-1 justify-items-center gap-5 pb-8 md:grid-cols-[repeat(auto-fill,minmax(345px,1fr))]">
-            {RESOURCE_TEMPLATES.map((template) => (
+            {VIBE_TEMPLATES.map((template) => (
               <TemplateCard
-                key={template.name}
+                key={template.id}
                 {...template}
                 className="max-w-md"
+                disabled={isStarting}
+                isStarting={startingTemplateId === template.id}
+                onSelect={() => void startTemplate(template)}
               />
             ))}
           </div>
@@ -83,8 +88,6 @@ export function ProjectPanel() {
                       id={project.id}
                       name={project.name}
                       edited={editedLabel(project)}
-                      image={project.image}
-                      previewClass={project.previewClass}
                       starred={isProjectStarred(project.id)}
                       onToggleStar={() => toggleStarProject(project.id)}
                     />

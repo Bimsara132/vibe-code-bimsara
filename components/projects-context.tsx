@@ -1,94 +1,225 @@
 'use client'
 
 import * as React from 'react'
+import {
+  useCreateUserProjectMutation,
+  useDeleteUserProjectMutation,
+  useGetMentorsQuery,
+  useGetUserProjectsQuery,
+  useUpdateUserProjectMutation,
+} from '@iblai/iblai-js/data-layer'
+import { useUsername } from '@iblai/iblai-js/web-utils'
 
-import { getTemplatePreview } from '@/components/dashboard/templates-data'
+import { formatEditedDate } from '@/lib/iblai/format-edited-date'
+import { resolveAppTenant } from '@/lib/iblai/tenant'
+import { useAuthTokensReady } from '@/lib/iblai/use-auth-tokens-ready'
 
 export type Project = {
   id: string
   name: string
-  templateName?: string
-  image?: string
-  previewClass?: string
+  description?: string
+  shared: boolean
+  ownerUsername?: string
   edited?: string
 }
 
 type ProjectsContextValue = {
   projects: Project[]
   starredProjectIds: string[]
-  sharedProjectIds: string[]
-  renameProject: (id: string, name: string) => void
-  removeProject: (id: string) => void
+  isLoading: boolean
+  isCreating: boolean
+  isError: boolean
+  createProject: (options?: {
+    name?: string
+    description?: string
+  }) => Promise<Project | null>
+  renameProject: (id: string, name: string) => Promise<void>
+  removeProject: (id: string) => Promise<void>
   toggleStarProject: (id: string) => void
   isProjectStarred: (id: string) => boolean
 }
 
 const ProjectsContext = React.createContext<ProjectsContextValue | null>(null)
 
-function projectFromTemplate(
-  id: string,
-  name: string,
-  templateName: string,
-  edited: string,
-): Project {
-  const template = getTemplatePreview(templateName)
-  return {
-    id,
-    name,
-    templateName,
-    image: template?.image,
-    previewClass: template?.previewClass,
-    edited,
+const STARRED_PROJECTS_STORAGE_KEY = 'iblai-starred-project-ids'
+
+function readStarredProjectIds(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STARRED_PROJECTS_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === 'string')
+      : []
+  } catch {
+    return []
   }
 }
 
-const INITIAL_PROJECTS: Project[] = [
-  projectFromTemplate(
-    'presentation-showcase',
-    'Presentation Showcase',
-    'vibe.ibl.ai',
-    'Edited 1 hour ago',
-  ),
-  projectFromTemplate(
-    'build-your-dream-site',
-    'Build Your Dream Site',
-    'Architect Portfolio Website Template',
-    'Edited yesterday',
-  ),
-  projectFromTemplate('hello-friend', 'Hello Friend', 'EventSpark', 'Edited 2 days ago'),
-  projectFromTemplate(
-    'friendly-assistant',
-    'Your Friendly Assistant',
-    'AssetWise',
-    'Edited 2 days ago',
-  ),
-  projectFromTemplate(
-    'commission-tracker',
-    'Commission Tracker',
-    'CommCalc',
-    'Edited 4 days ago',
-  ),
-  projectFromTemplate('habit-flow', 'Habit Flow', 'Continuum', 'Edited 1 week ago'),
-]
+function writeStarredProjectIds(ids: string[]) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(STARRED_PROJECTS_STORAGE_KEY, JSON.stringify(ids))
+}
 
 export function ProjectsProvider({ children }: { children: React.ReactNode }) {
-  const [projects, setProjects] = React.useState<Project[]>(INITIAL_PROJECTS)
+  const tenantKey = React.useMemo(() => resolveAppTenant(), [])
+  const username = useUsername() ?? ''
+  const tokensReady = useAuthTokensReady()
+
+  const { data: accessibleMentors } = useGetMentorsQuery(
+    {
+      org: tenantKey,
+      username,
+      limit: 1,
+      includeMainPublicMentors: true,
+      orderBy: 'recently_accessed_at',
+      orderDirection: 'desc',
+    },
+    { skip: !tokensReady || !tenantKey || !username },
+  )
+
+  const accessibleMentorId =
+    accessibleMentors?.results?.find((mentor) => mentor.unique_id)?.unique_id ?? ''
+
   const [starredProjectIds, setStarredProjectIds] = React.useState<string[]>([])
-  const [sharedProjectIds] = React.useState<string[]>([])
 
-  const renameProject = React.useCallback((id: string, name: string) => {
-    setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)))
+  React.useEffect(() => {
+    setStarredProjectIds(readStarredProjectIds())
   }, [])
 
-  const removeProject = React.useCallback((id: string) => {
-    setProjects((prev) => prev.filter((p) => p.id !== id))
-    setStarredProjectIds((prev) => prev.filter((starredId) => starredId !== id))
-  }, [])
+  const { data, isLoading, isFetching, isError } = useGetUserProjectsQuery(
+    {
+      tenantKey,
+      username,
+      params: { limit: 100, sort: '-updated_at' },
+    },
+    { skip: !tokensReady || !tenantKey || !username },
+  )
+
+  const [updateUserProject] = useUpdateUserProjectMutation()
+  const [deleteUserProject] = useDeleteUserProjectMutation()
+  const [createUserProject, { isLoading: isCreating }] = useCreateUserProjectMutation()
+
+  const projects = React.useMemo<Project[]>(() => {
+    return (data?.results ?? []).map((project) => ({
+      id: String(project.id),
+      name: project.name,
+      description: project.description,
+      shared: project.shared,
+      ownerUsername: project.owner_username,
+      edited: formatEditedDate(project.updated_at),
+    }))
+  }, [data?.results])
+
+  const mapApiProject = React.useCallback(
+    (project: {
+      id: number
+      name: string
+      description: string
+      shared: boolean
+      owner_username: string
+      updated_at: string
+    }): Project => ({
+      id: String(project.id),
+      name: project.name,
+      description: project.description,
+      shared: project.shared,
+      ownerUsername: project.owner_username,
+      edited: formatEditedDate(project.updated_at),
+    }),
+    [],
+  )
+
+  const createProject = React.useCallback(async (options?: { name?: string; description?: string }) => {
+    if (!tenantKey) return null
+
+    const baseData = {
+      name: options?.name?.trim() || 'Untitled project',
+      description: options?.description?.trim() || '',
+      shared: false,
+    }
+
+    try {
+      const created = await createUserProject({
+        tenantKey,
+        username,
+        data: accessibleMentorId
+          ? { ...baseData, mentors_to_add: [accessibleMentorId] }
+          : baseData,
+      }).unwrap()
+
+      return mapApiProject(created)
+    } catch (error) {
+      const mentorError =
+        accessibleMentorId &&
+        typeof error === 'object' &&
+        error !== null &&
+        'status' in error &&
+        (error as { status?: number }).status === 400
+
+      if (!mentorError) {
+        console.error('[ibl.ai] Failed to create project', error)
+        return null
+      }
+
+      try {
+        const created = await createUserProject({
+          tenantKey,
+          username,
+          data: baseData,
+        }).unwrap()
+
+        return mapApiProject(created)
+      } catch (retryError) {
+        console.error('[ibl.ai] Failed to create project', retryError)
+        return null
+      }
+    }
+  }, [accessibleMentorId, createUserProject, mapApiProject, tenantKey, username])
+
+  const renameProject = React.useCallback(
+    async (id: string, name: string) => {
+      const trimmed = name.trim()
+      if (!trimmed || !tenantKey) return
+
+      await updateUserProject({
+        tenantKey,
+        username,
+        id: Number(id),
+        data: { name: trimmed },
+      }).unwrap()
+    },
+    [tenantKey, updateUserProject, username],
+  )
+
+  const removeProject = React.useCallback(
+    async (id: string) => {
+      if (!tenantKey) return
+
+      await deleteUserProject({
+        tenantKey,
+        username,
+        id: Number(id),
+      }).unwrap()
+
+      setStarredProjectIds((prev) => {
+        const next = prev.filter((starredId) => starredId !== id)
+        writeStarredProjectIds(next)
+        return next
+      })
+    },
+    [deleteUserProject, tenantKey, username],
+  )
 
   const toggleStarProject = React.useCallback((id: string) => {
-    setStarredProjectIds((prev) =>
-      prev.includes(id) ? prev.filter((starredId) => starredId !== id) : [...prev, id],
-    )
+    setStarredProjectIds((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((starredId) => starredId !== id)
+        : [...prev, id]
+      writeStarredProjectIds(next)
+      return next
+    })
   }, [])
 
   const isProjectStarred = React.useCallback(
@@ -100,7 +231,10 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     () => ({
       projects,
       starredProjectIds,
-      sharedProjectIds,
+      isLoading: !tokensReady || isLoading || isFetching,
+      isCreating,
+      isError,
+      createProject,
       renameProject,
       removeProject,
       toggleStarProject,
@@ -109,7 +243,12 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     [
       projects,
       starredProjectIds,
-      sharedProjectIds,
+      tokensReady,
+      isLoading,
+      isFetching,
+      isCreating,
+      isError,
+      createProject,
       renameProject,
       removeProject,
       toggleStarProject,

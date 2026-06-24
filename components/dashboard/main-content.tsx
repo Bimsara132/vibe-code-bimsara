@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { VibeBuildChat } from '@/components/iblai/vibe-build-chat'
 import { HomeSdkVoiceHost } from '@/components/iblai/home-sdk-voice-host'
 import { useOnyxUI } from '@/components/onyx-shell-context'
-import { readPendingBuild, savePendingBuild } from '@/lib/iblai/pending-build'
+import { resolvePendingBuild, savePendingBuild } from '@/lib/iblai/pending-build'
 import {
   triggerSdkVoiceCallWithRetry,
   triggerSdkVoiceInputWithRetry,
@@ -81,14 +81,13 @@ export function MainContent() {
   const showChat = Boolean(restoreSessionId || newParam)
 
   if (showChat) {
-    const pendingBuild = readPendingBuild(newParam)
-    const isNewBuild = Boolean(newParam && pendingBuild)
+    const pendingBuild = resolvePendingBuild(newParam)
 
     return (
       <VibeBuildChat
-        initialPrompt={isNewBuild ? pendingBuild!.prompt : ''}
-        useCanvas={isNewBuild ? pendingBuild!.useCanvas : false}
-        buildNonce={isNewBuild ? pendingBuild!.nonce : undefined}
+        initialPrompt={pendingBuild?.prompt ?? ''}
+        useCanvas={pendingBuild?.useCanvas ?? false}
+        buildNonce={pendingBuild?.nonce}
       />
     )
   }

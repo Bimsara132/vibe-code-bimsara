@@ -5,12 +5,16 @@ import { useDispatch, useSelector } from 'react-redux'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Chat, type ChatConfig } from '@iblai/iblai-js/web-containers/next'
+import { useGetUserProjectDetailsQuery } from '@iblai/iblai-js/data-layer'
 import {
   chatActions,
   selectArtifactsEnabled,
+  selectIsPending,
+  selectIsTyping,
+  selectNumberOfActiveChatMessages,
   selectSessionId,
+  selectStreaming,
   TOOLS,
-  useAxdToken,
   useCachedSessionId,
   useIsAdmin,
   useMentorTools,
@@ -20,25 +24,30 @@ import {
 } from '@iblai/iblai-js/web-utils'
 
 import { AppLoadingScreen } from '@/components/app-loading-screen'
-import { ChatMessageList } from '@/components/dashboard/chat-message-list'
 import { ChatPromptFooter } from '@/components/dashboard/chat-prompt-footer'
 import { VoiceBootstrap } from '@/components/iblai/voice-bootstrap'
 import { redirectToAuthSpa } from '@/lib/iblai/auth-utils'
 import { buildPromptWithCanvas } from '@/lib/iblai/build-canvas-prompt'
 import { upsertLocalRecentChat } from '@/lib/iblai/local-recent-chats'
 import { clearPendingBuild } from '@/lib/iblai/pending-build'
+import { buildRecentChatHref } from '@/lib/iblai/recent-chat-utils'
 import config from '@/lib/iblai/config'
 import {
   isSdkChatInputMounted,
   submitSdkChatMessageWithRetry,
 } from '@/lib/iblai/submit-sdk-chat'
+import { useAuthTokensReady } from '@/lib/iblai/use-auth-tokens-ready'
+import { useCanvasSplitActive } from '@/lib/iblai/use-canvas-split-active'
 import { useDefaultMentorId } from '@/lib/iblai/use-default-mentor'
+import { useResolvedAxdToken } from '@/lib/iblai/use-resolved-axd-token'
 import { resolveAppTenant } from '@/lib/iblai/tenant'
+import { cn } from '@/lib/utils'
 
 type VibeBuildChatProps = {
   initialPrompt?: string
   useCanvas?: boolean
   buildNonce?: string
+  projectId?: string
 }
 
 function CanvasBuildBootstrap({
@@ -155,6 +164,7 @@ function VibeBuildChatInner({
   initialPrompt = '',
   useCanvas = false,
   buildNonce,
+  projectId,
 }: VibeBuildChatProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -166,21 +176,71 @@ function VibeBuildChatInner({
 
   const { mentorId: defaultMentorId, isLoading: isMentorLoading } =
     useDefaultMentorId()
-  const mentorId = restoreMentorId || defaultMentorId
 
+  const [tenantKey, setTenantKey] = useState('')
+  const username = useUsername() ?? ''
+
+  const { data: projectDetails, isLoading: isProjectDetailsLoading } =
+    useGetUserProjectDetailsQuery(
+      {
+        tenantKey,
+        username,
+        id: Number(projectId),
+      },
+      {
+        skip: !projectId || !tenantKey || !username || Number.isNaN(Number(projectId)),
+      },
+    )
+
+  const projectMentorId =
+    projectDetails?.mentors?.find((mentor) => mentor.unique_id)?.unique_id ?? ''
+
+  const mentorId = restoreMentorId || projectMentorId || defaultMentorId
   const [cachedSessionId, saveCachedSessionId] = useCachedSessionId()
   const [seededFor, setSeededFor] = useState<string | undefined>(
     restoreSessionId || newParam ? undefined : 'none',
   )
-  const [tenantKey, setTenantKey] = useState('')
-
-  const username = useUsername() ?? ''
-  const axdToken = useAxdToken()
+  const axdToken = useResolvedAxdToken()
+  const tokensReady = useAuthTokensReady()
+  const canvasSplitActive = useCanvasSplitActive()
+  const sdkChatReady = tokensReady && Boolean(axdToken)
   const { userTenants } = useUserTenants()
   const { visitingTenant } = useVisitingTenant()
   const isAdmin = useIsAdmin()
   const dispatch = useDispatch()
   const sessionId = useSelector(selectSessionId)
+  const messageCount = useSelector(selectNumberOfActiveChatMessages)
+  const isPending = useSelector(selectIsPending)
+  const isStreaming = useSelector(selectStreaming)
+  const isTyping = useSelector(selectIsTyping)
+  const isColdSessionRestoreRef = useRef(
+    Boolean(searchParams.get('session')) && !searchParams.get('new'),
+  )
+  const chatKey = `vibe-chat-${mentorId ?? 'pending'}-${projectId ?? 'home'}`
+  const isProjectMode = Boolean(projectId)
+  const isGenerating = isPending || isStreaming || isTyping
+  const hideSdkWelcome =
+    messageCount > 0 || isGenerating || Boolean(newParam)
+
+  useEffect(() => {
+    if (isColdSessionRestoreRef.current) return
+    if (!sessionId || !mentorId || restoreSessionId || !newParam) return
+    if (messageCount === 0 && !isGenerating) return
+
+    const target = buildRecentChatHref(sessionId, mentorId)
+    const current = `${window.location.pathname}${window.location.search}`
+    if (current !== target) {
+      router.replace(target, { scroll: false })
+    }
+  }, [
+    isGenerating,
+    mentorId,
+    messageCount,
+    newParam,
+    restoreSessionId,
+    router,
+    sessionId,
+  ])
 
   useLayoutEffect(() => {
     if (!newParam || !mentorId) return
@@ -250,12 +310,19 @@ function VibeBuildChatInner({
     authUrl: () => config.authUrl(),
     mainTenantKey: config.mainTenantKey(),
     navigateToAdminBilling: () => router.push('/app/profile'),
-    navigateToExplore: () => router.push('/app'),
-    navigateToMentor: () => router.push('/app'),
+    // This app uses a single build chat surface — never navigate away mid-session.
+    navigateToExplore: () => {},
+    navigateToMentor: () => {},
   }
 
-  if ((restoreMentorId ? false : isMentorLoading) || !tenantKey || !sessionReady) {
-    return <AppLoadingScreen />
+  if (
+    (restoreMentorId ? false : isMentorLoading && !defaultMentorId) ||
+    (isProjectMode && isProjectDetailsLoading && !projectDetails) ||
+    !tenantKey ||
+    !sessionReady ||
+    !sdkChatReady
+  ) {
+    return <AppLoadingScreen message="Loading chat…" />
   }
 
   if (!mentorId) {
@@ -274,44 +341,64 @@ function VibeBuildChatInner({
     )
   }
 
-  const skipInitialSubmit = Boolean(restoreSessionId && !initialPrompt.trim())
+  const skipInitialSubmit =
+    isColdSessionRestoreRef.current &&
+    Boolean(restoreSessionId) &&
+    !initialPrompt.trim()
 
   return (
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex h-full min-h-0 flex-1 flex-col overflow-hidden py-0 md:py-[10px]"
+      className={cn(
+        'vibe-build-chat flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-white py-0',
+        !canvasSplitActive && 'md:py-[10px]',
+        canvasSplitActive && 'canvas-split-active',
+        isProjectMode && 'project-mode',
+        hideSdkWelcome && 'hide-sdk-welcome',
+      )}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-none md:rounded-[10px]">
+      <div
+        className={cn(
+          'relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white',
+          !canvasSplitActive && 'rounded-none md:rounded-[10px]',
+        )}
+      >
         <div
-          id="vibe-custom-chat"
-          className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
-          aria-hidden
+          className={cn(
+            'relative flex min-h-0 flex-1 flex-col overflow-hidden',
+            canvasSplitActive
+              ? 'z-20'
+              : isProjectMode
+                ? 'z-10 w-full bg-white px-4 md:px-8'
+                : 'z-10 mx-auto w-full max-w-[720px] bg-white px-4 md:px-8',
+          )}
         >
-          <Chat
-            key={`${mentorId}:${restoreSessionId ?? ''}:${newParam ?? ''}:${initialPrompt ? 'build' : ''}`}
-            isPreviewMode={false}
-            hasBorder={false}
-            mentorId={mentorId}
-            tenantKey={tenantKey}
-            config={chatConfig}
-            redirectToAuthSpa={(redirectTo, platformKey, logout) => {
-              void redirectToAuthSpa(redirectTo, platformKey, logout)
-            }}
-            username={username || null}
-            userTenants={userTenants ?? []}
-            visitingTenant={visitingTenant}
-            axdToken={axdToken ?? ''}
-            userIsStudent={!isAdmin}
-          />
-        </div>
-
-        <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col px-4 md:px-8">
-          <ChatMessageList
-            initialPrompt={initialPrompt}
-            isRestoringSession={Boolean(restoreSessionId)}
-          />
-          <ChatPromptFooter mentorId={mentorId} tenantKey={tenantKey} />
+          <div
+            id="vibe-custom-chat"
+            className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
+            <Chat
+              key={chatKey}
+              isPreviewMode={false}
+              hasBorder={false}
+              mentorId={mentorId}
+              tenantKey={tenantKey}
+              config={chatConfig}
+              redirectToAuthSpa={(redirectTo, platformKey, logout) => {
+                void redirectToAuthSpa(redirectTo, platformKey, logout)
+              }}
+              username={username || null}
+              userTenants={userTenants ?? []}
+              visitingTenant={visitingTenant}
+              axdToken={axdToken}
+              userIsStudent={!isAdmin}
+              projectId={projectId}
+            />
+          </div>
+          {!canvasSplitActive && !isProjectMode ? (
+            <ChatPromptFooter mentorId={mentorId} tenantKey={tenantKey} />
+          ) : null}
         </div>
 
         <CanvasBuildBootstrap

@@ -393,7 +393,7 @@ export function SidebarLink({
   icon: NavIcon
   label: string
   active?: boolean
-  onClick?: () => void
+  onClick?: React.MouseEventHandler<HTMLAnchorElement>
   collapsed: boolean
   variant?: 'default' | 'primary'
   activeTone?: 'brand' | 'neutral'
@@ -1050,15 +1050,22 @@ function SidebarContentImpl({
   afterNavigate?: () => void
 }) {
   const pathname = usePathname()
-  const router = useRouter()
   const searchParams = useSearchParams()
-  const { setSearchOpen, setConnectorsOpen, connectorsOpen, toggleSidebarCollapsed, setSidebarCollapsed } =
-    useOnyxUI()
+  const {
+    setSearchOpen,
+    setConnectorsOpen,
+    connectorsOpen,
+    toggleSidebarCollapsed,
+    setSidebarCollapsed,
+    resetHomeChat,
+  } = useOnyxUI()
   const { items: recentChats, isLoading: recentChatsLoading } = useRecentChats()
 
   const collapsed = variant === 'collapsed'
   const isAppHome = pathname === '/app'
   const activeSessionId = searchParams.get('session')
+  const activeNewChat = searchParams.get('new')
+  const isHomeView = isAppHome && !activeSessionId && !activeNewChat
   const isAdmin = pathname.startsWith('/app/admin')
   const isResources = pathname.startsWith('/app/resources')
   const isProjectsSection = pathname.startsWith('/app/projects')
@@ -1080,9 +1087,9 @@ function SidebarContentImpl({
 
   const done = () => afterNavigate?.()
 
-  const startNewChat = React.useCallback(() => {
-    router.replace(`/app?new=${Date.now()}`)
-  }, [router])
+  const goHome = React.useCallback(() => {
+    resetHomeChat()
+  }, [resetHomeChat])
 
   const expandRail = React.useCallback(() => {
     setSidebarCollapsed(false)
@@ -1165,7 +1172,8 @@ function SidebarContentImpl({
                 <Link
                   href="/app"
                   onClick={() => {
-                    startNewChat()
+                    goHome()
+                    setConnectorsOpen(false)
                     done()
                   }}
                   aria-label="New Chat"
@@ -1300,10 +1308,10 @@ function SidebarContentImpl({
                 href="/app"
                 icon={SquarePen}
                 label="New Chat"
-                active={isAppHome && !connectorsOpen && !activeSessionId}
+                active={isHomeView && !connectorsOpen}
                 collapsed={collapsed}
                 onClick={() => {
-                  startNewChat()
+                  goHome()
                   setConnectorsOpen(false)
                   done()
                 }}

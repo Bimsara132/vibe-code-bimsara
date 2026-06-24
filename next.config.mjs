@@ -1,6 +1,9 @@
 import { createRequire } from 'module'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 const require = createRequire(import.meta.url)
+const projectRoot = path.dirname(fileURLToPath(import.meta.url))
 
 const isGithubPages = process.env.GITHUB_PAGES === 'true'
 
@@ -40,7 +43,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  turbopack: {},
+  turbopack: {
+    root: projectRoot,
+  },
   webpack: (config) => {
     config.resolve = config.resolve || {}
     config.resolve.alias = config.resolve.alias || {}

@@ -5,6 +5,7 @@
 import { configureStore } from '@reduxjs/toolkit'
 import {
   coreApiSlice,
+  mcpApiSlice,
   mentorMiddleware,
   mentorReducer,
 } from '@iblai/iblai-js/data-layer'
@@ -28,11 +29,13 @@ export const iblaiStore = configureStore({
     subscription: subscriptionReducer,
     topBanner: topBannerReducer,
     [coreApiSlice.reducerPath]: coreApiSlice.reducer,
+    [mcpApiSlice.reducerPath]: mcpApiSlice.reducer,
     ...mentorReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false })
       .concat(coreApiSlice.middleware)
+      .concat(mcpApiSlice.middleware)
       .concat(...mentorMiddleware),
 })
 

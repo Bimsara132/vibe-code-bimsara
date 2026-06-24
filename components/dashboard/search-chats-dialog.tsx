@@ -17,7 +17,9 @@ import {
 } from 'lucide-react'
 
 import { useOnyxUI } from '@/components/onyx-shell-context'
+import { useProjects } from '@/components/projects-context'
 import { useRecentChats } from '@/lib/iblai/use-recent-chats'
+import { buildProjectHref } from '@/lib/iblai/project-route'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 
@@ -146,7 +148,8 @@ function SearchResultRow({
 
 export function SearchChatsDialog() {
   const router = useRouter()
-  const { searchOpen, setSearchOpen, setCreateProjectOpen, setProfileOpen } = useOnyxUI()
+  const { searchOpen, setSearchOpen, setProfileOpen } = useOnyxUI()
+  const { createProject } = useProjects()
   const { items: recentChats } = useRecentChats()
   const [query, setQuery] = React.useState('')
   const [selectedId, setSelectedId] = React.useState('')
@@ -194,7 +197,9 @@ export function SearchChatsDialog() {
 
     if (selectedItem.action === 'create-project') {
       setSearchOpen(false)
-      setCreateProjectOpen(true)
+      void createProject().then((project) => {
+        if (project) router.push(buildProjectHref(project.id))
+      })
       return
     }
 
@@ -214,7 +219,7 @@ export function SearchChatsDialog() {
       setSearchOpen(false)
       router.push(selectedItem.href)
     }
-  }, [router, selectedItem, setCreateProjectOpen, setProfileOpen, setSearchOpen])
+  }, [createProject, router, selectedItem, setProfileOpen, setSearchOpen])
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
